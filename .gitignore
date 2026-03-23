@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env
+.env.local
+*.tsbuildinfo
+next-env.d.ts
+public/uploads/transfer-receipts/*
+!public/uploads/transfer-receipts/.gitkeep
+public/uploads/digital-products/*
+!public/uploads/digital-products/.gitkeep

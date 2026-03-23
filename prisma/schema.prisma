@@ -1,0 +1,427 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum OrderSource {
+  PRODUCT
+  COURSE
+}
+
+enum OrderItemType {
+  PRODUCT
+  COURSE
+}
+
+enum CheckoutPaymentMethod {
+  MERCADOPAGO
+  BANK_TRANSFER
+}
+
+enum TransferReceiptStatus {
+  NONE
+  PENDING
+  VALIDATED
+}
+
+model PaymentAccount {
+  id            String   @id @default(cuid())
+  holderName    String
+  accountNumber String
+  bankName      String
+  bankKey       String   @default("generic")
+  active        Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  orders        Order[]
+
+  @@index([active, sortOrder])
+}
+
+model User {
+  id             String    @id @default(cuid())
+  name           String?
+  email          String    @unique
+  hashedPassword String
+  phone          String?
+  address        String?
+  city           String?
+  role           Role      @default(USER)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  orders         Order[]
+  courseBookings  CourseBooking[]
+  userOnlineCourses UserCourse[]
+  userLessonProgress UserLessonProgress[]
+  onlineCoursePurchases UserCoursePurchase[]
+}
+
+model Category {
+  id            String     @id @default(cuid())
+  name          String
+  slug          String     @unique
+  image         String?
+  order         Int        @default(0)
+  showInNavbar  Boolean    @default(false)
+  parentId      String?
+  parent        Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children      Category[] @relation("CategoryTree")
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  products      Product[]
+
+  @@index([parentId])
+  @@index([showInNavbar])
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  price       Float
+  comparePrice Float?
+  currency    String    @default("UYU")
+  images      String[]
+  imageUrl    String?
+  featured    Boolean   @default(false)
+  active      Boolean   @default(true)
+  isDigital   Boolean   @default(false)
+  fileUrl     String?
+  fileName    String?
+  isOnlineCourse Boolean @default(false)
+  onlineCourseId String? @unique
+  onlineCourse  OnlineCourse? @relation(fields: [onlineCourseId], references: [id], onDelete: SetNull)
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  variants    Variant[]
+  orderItems  OrderItem[]
+
+  @@index([categoryId])
+  @@index([slug])
+  @@index([isDigital])
+  @@index([isOnlineCourse])
+}
+
+model Variant {
+  id        String   @id @default(cuid())
+  name      String
+  value     String
+  price     Float?
+  stock     Int      @default(0)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+}
+
+model Order {
+  id                     String                  @id @default(cuid())
+  userId                 String
+  user                   User                    @relation(fields: [userId], references: [id])
+  items                  OrderItem[]
+  total                  Float
+  currency               String                  @default("UYU")
+  status                 OrderStatus             @default(PENDING)
+  source                 OrderSource             @default(PRODUCT)
+  checkoutPaymentMethod  CheckoutPaymentMethod  @default(MERCADOPAGO)
+  transferAccountId      String?
+  transferAccount        PaymentAccount?         @relation(fields: [transferAccountId], references: [id], onDelete: SetNull)
+  transferReceiptUrl     String?
+  transferReceiptStatus  TransferReceiptStatus  @default(NONE)
+  transferReceiptAt      DateTime?
+  paymentId              String?
+  paymentProvider        String?
+  shippingName           String?
+  shippingAddress        String?
+  shippingCity           String?
+  shippingPhone          String?
+  notes                  String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  courseBooking          CourseBooking?
+  onlineCoursePurchases  UserCoursePurchase[]
+
+  @@index([userId])
+  @@index([paymentId])
+  @@index([source])
+  @@index([transferAccountId])
+}
+
+model OrderItem {
+  id              String         @id @default(cuid())
+  orderId         String
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemType        OrderItemType  @default(PRODUCT)
+  productId       String?
+  product         Product?       @relation(fields: [productId], references: [id])
+  courseSessionId String?
+  courseSession   CourseSession? @relation(fields: [courseSessionId], references: [id])
+  productName     String
+  variant         String?
+  quantity        Int
+  price           Float
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([courseSessionId])
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  title     String?
+  subtitle  String?
+  buttonText String?
+  buttonLink String?
+  image     String
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SiteSettings {
+  id                     String  @id @default("main")
+  siteName               String  @default("Karamba")
+  siteDescription        String?
+  defaultCurrency        String  @default("UYU")
+  mercadoPagoAccessToken String?
+  mercadoPagoPublicKey   String?
+  mercadoPagoEnabled     Boolean @default(false)
+  contactEmail           String?
+  contactPhone           String?
+  contactAddress         String?
+  instagram              String?
+  facebook               String?
+  whatsapp               String?
+  /// JSON: [{ "image": "url", "url": "permalink" }] — feed manual si el scrape falla
+  instagramFeedManual    Json?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+// ===== Course system with sessions & bookings =====
+
+enum CourseType {
+  PRESENCIAL
+  VIRTUAL
+}
+
+model Course {
+  id          String          @id @default(cuid())
+  title       String
+  slug        String          @unique
+  description String?
+  price       Float
+  currency    String          @default("UYU")
+  image       String?
+  duration    String?
+  courseType   CourseType      @default(PRESENCIAL)
+  published   Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  sessions    CourseSession[]
+
+  @@index([slug])
+}
+
+enum BookingStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+model CourseSession {
+  id             String          @id @default(cuid())
+  courseId        String
+  course         Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  date           DateTime
+  startTime      String
+  endTime        String
+  instructorName String?
+  capacity       Int             @default(10)
+  meetingUrl     String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  bookings       CourseBooking[]
+  orderItems     OrderItem[]
+
+  @@index([courseId])
+  @@index([date])
+}
+
+model CourseBooking {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  courseSessionId String
+  courseSession   CourseSession  @relation(fields: [courseSessionId], references: [id], onDelete: Cascade)
+  orderId         String?       @unique
+  order           Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  status          BookingStatus @default(PENDING)
+  paymentId       String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@unique([userId, courseSessionId])
+  @@index([courseSessionId])
+  @@index([userId])
+  @@index([orderId])
+}
+
+// ===== Cursos online grabados (e-learning) =====
+
+enum CourseOnlineLevel {
+  BASIC
+  INTERMEDIATE
+  ADVANCED
+}
+
+model OnlineCourse {
+  id                   String            @id @default(cuid())
+  title                String
+  slug                 String            @unique
+  description          String?           @db.Text
+  image                String?
+  price                Float             @default(0)
+  level                CourseOnlineLevel @default(BASIC)
+  isPublished          Boolean           @default(false)
+  totalDurationMinutes Int?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  modules              CourseModule[]
+  resources            CourseResource[]
+  products             Product[]
+  enrollments          UserCourse[]
+  purchases            UserCoursePurchase[]
+
+  @@index([slug])
+  @@index([isPublished])
+}
+
+model CourseModule {
+  id        String       @id @default(cuid())
+  courseId  String
+  course    OnlineCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title     String
+  order     Int          @default(0)
+  lessons   CourseLesson[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([courseId])
+}
+
+model CourseLesson {
+  id               String   @id @default(cuid())
+  moduleId         String
+  module           CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title            String
+  /** URL YouTube/Vimeo o ruta subida: /uploads/course-videos/… */
+  videoUrl         String?
+  content          String?  @db.Text
+  durationMinutes  Int?
+  order            Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  progressRecords  UserLessonProgress[]
+
+  @@index([moduleId])
+}
+
+model CourseResource {
+  id        String       @id @default(cuid())
+  courseId  String
+  course    OnlineCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title     String
+  fileUrl   String
+  order     Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([courseId])
+}
+
+model UserCourse {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  onlineCourseId String
+  onlineCourse   OnlineCourse @relation(fields: [onlineCourseId], references: [id], onDelete: Cascade)
+  progress       Float        @default(0)
+  lastLessonId   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([userId, onlineCourseId])
+  @@index([userId])
+  @@index([onlineCourseId])
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  toEmail   String
+  eventType String
+  dedupeKey String
+  subject   String?
+  success   Boolean  @default(false)
+  error     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([eventType, dedupeKey])
+  @@index([toEmail])
+  @@index([createdAt])
+}
+
+/// Compra que otorga acceso al curso online (revocable si la orden se cancela)
+model UserCoursePurchase {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  onlineCourseId String
+  onlineCourse   OnlineCourse @relation(fields: [onlineCourseId], references: [id], onDelete: Cascade)
+  orderId        String
+  order          Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@unique([orderId, onlineCourseId])
+  @@index([userId, onlineCourseId])
+}
+
+model UserLessonProgress {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId  String
+  lesson    CourseLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed Boolean      @default(false)
+  updatedAt DateTime     @updatedAt
+
+  @@unique([userId, lessonId])
+  @@index([userId])
+  @@index([lessonId])
+}

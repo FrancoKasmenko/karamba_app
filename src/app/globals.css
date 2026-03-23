@@ -1,0 +1,55 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #e8637a;
+  --color-primary-dark: #d44860;
+  --color-primary-light: #fdd7de;
+  --color-secondary: #d4a0dc;
+  --color-secondary-dark: #b87bc5;
+  --color-secondary-light: #f3e0f7;
+  --color-accent: #f7c873;
+  --color-accent-dark: #e5ad42;
+  --color-accent-light: #fef4dc;
+  --color-peach: #f9a0b0;
+  --color-peach-light: #fdd6de;
+  --color-cream: #fff7f8;
+  --color-beige: #fdf0f2;
+  --color-blush: #ffe8ee;
+  --color-lavender: #f0e0f5;
+  --color-mint: #d4f0e7;
+  --color-rose: #f7799a;
+  --color-warm-gray: #5e4a4e;
+  --color-soft-gray: #f8f0ee;
+  --font-sans: "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-cream);
+  color: #4a3f3f;
+}
+
+::selection {
+  background-color: var(--color-primary-light);
+  color: #4a3f3f;
+}
+
+.gradient-hero {
+  background: linear-gradient(135deg, #ffe8ee 0%, #f0e0f5 50%, #fef4dc 100%);
+}
+
+.gradient-warm {
+  background: linear-gradient(135deg, #fdd6de 0%, #ffe8ee 50%, #fef4dc 100%);
+}
+
+.text-gradient {
+  background: linear-gradient(135deg, #e8637a, #d4a0dc, #f7c873);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}

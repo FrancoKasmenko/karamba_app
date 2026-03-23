@@ -1,0 +1,332 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { FiSearch, FiSliders, FiX } from "react-icons/fi";
+import ProductCard from "@/components/ui/product-card";
+
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  comparePrice: number | null;
+  images: string[];
+  imageUrl: string | null;
+  featured: boolean;
+  isDigital: boolean;
+  category: { name: string; slug: string } | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  children: { id: string; name: string; slug: string }[];
+}
+
+export default function ProductsClient({
+  initialProducts,
+  categories,
+}: {
+  initialProducts: Product[];
+  categories: Category[];
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialCategory = searchParams.get("categoria") || "";
+  const initialQuery = searchParams.get("q") || "";
+  const nuevosOnly = searchParams.get("nuevos") === "1";
+
+  const [search, setSearch] = useState(initialQuery);
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 99999]);
+  const [sortBy, setSortBy] = useState<string>("newest");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
+  const allCategorySlugs = useMemo(() => {
+    const slugs: string[] = [];
+    categories.forEach((c) => {
+      slugs.push(c.slug);
+      c.children.forEach((s) => slugs.push(s.slug));
+    });
+    return slugs;
+  }, [categories]);
+
+  const filtered = useMemo(() => {
+    let result = [...initialProducts];
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.category?.name.toLowerCase().includes(q)
+      );
+    }
+
+    if (nuevosOnly) {
+      result = result.filter((p) => p.featured);
+    }
+
+    if (selectedCategory && allCategorySlugs.includes(selectedCategory)) {
+      const parentCat = categories.find((c) => c.slug === selectedCategory);
+      if (parentCat) {
+        const childSlugs = parentCat.children.map((ch) => ch.slug);
+        result = result.filter(
+          (p) =>
+            p.category?.slug === selectedCategory ||
+            childSlugs.includes(p.category?.slug || "")
+        );
+      } else {
+        result = result.filter((p) => p.category?.slug === selectedCategory);
+      }
+    }
+
+    result = result.filter(
+      (p) => p.price >= priceRange[0] && p.price <= priceRange[1]
+    );
+
+    switch (sortBy) {
+      case "price-asc":
+        result.sort((a, b) => a.price - b.price);
+        break;
+      case "price-desc":
+        result.sort((a, b) => b.price - a.price);
+        break;
+      case "name":
+        result.sort((a, b) => a.name.localeCompare(b.name));
+        break;
+      default:
+        break;
+    }
+
+    return result;
+  }, [
+    initialProducts,
+    search,
+    selectedCategory,
+    priceRange,
+    sortBy,
+    categories,
+    allCategorySlugs,
+    nuevosOnly,
+  ]);
+
+  const clearFilters = () => {
+    setSearch("");
+    setSelectedCategory("");
+    setPriceRange([0, 99999]);
+    setSortBy("newest");
+    if (nuevosOnly) router.push("/productos");
+  };
+
+  const hasActiveFilters =
+    search || selectedCategory || sortBy !== "newest" || nuevosOnly;
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+      <div className="mb-8">
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-warm-gray">
+          Nuestros Productos
+        </h1>
+        <p className="mt-2 text-gray-500">
+          Cada pieza es &uacute;nica y hecha con amor
+        </p>
+      </div>
+
+      {/* Search + filter bar */}
+      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="flex-1 flex items-center bg-white rounded-xl border border-primary-light/40 px-4 py-2.5 shadow-sm focus-within:border-primary transition-colors">
+          <FiSearch size={18} className="text-gray-400 mr-3" />
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar productos..."
+            className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="text-gray-400 hover:text-gray-600 ml-2"
+            >
+              <FiX size={16} />
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-4 py-2.5 bg-white border border-primary-light/40 rounded-xl text-sm text-warm-gray outline-none focus:border-primary shadow-sm"
+          >
+            <option value="newest">M&aacute;s recientes</option>
+            <option value="price-asc">Menor precio</option>
+            <option value="price-desc">Mayor precio</option>
+            <option value="name">A-Z</option>
+          </select>
+          <button
+            onClick={() => setFiltersOpen(!filtersOpen)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium border transition-colors shadow-sm ${
+              filtersOpen
+                ? "bg-primary text-white border-primary"
+                : "bg-white text-warm-gray border-primary-light/40 hover:border-primary"
+            }`}
+          >
+            <FiSliders size={16} />
+            Filtros
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded filters */}
+      <AnimatePresence>
+        {filtersOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden mb-6"
+          >
+            <div className="bg-white rounded-2xl border border-primary-light/30 p-5 shadow-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Category filter */}
+                <div>
+                  <label className="block text-xs font-semibold text-warm-gray mb-2 uppercase tracking-wider">
+                    Categor&iacute;a
+                  </label>
+                  <select
+                    value={selectedCategory}
+                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary"
+                  >
+                    <option value="">Todas</option>
+                    {categories.map((cat) => (
+                      <optgroup key={cat.id} label={cat.name}>
+                        <option value={cat.slug}>{cat.name} (todo)</option>
+                        {cat.children.map((sub) => (
+                          <option key={sub.id} value={sub.slug}>
+                            {sub.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Price range */}
+                <div>
+                  <label className="block text-xs font-semibold text-warm-gray mb-2 uppercase tracking-wider">
+                    Precio m&iacute;nimo
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={priceRange[0] || ""}
+                    onChange={(e) =>
+                      setPriceRange([Number(e.target.value) || 0, priceRange[1]])
+                    }
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary"
+                    placeholder="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-warm-gray mb-2 uppercase tracking-wider">
+                    Precio m&aacute;ximo
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={priceRange[1] === 99999 ? "" : priceRange[1]}
+                    onChange={(e) =>
+                      setPriceRange([priceRange[0], Number(e.target.value) || 99999])
+                    }
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary"
+                    placeholder="Sin l\u00edmite"
+                  />
+                </div>
+              </div>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="mt-4 text-xs text-primary font-semibold hover:underline"
+                >
+                  Limpiar todos los filtros
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Active filters badges */}
+      {hasActiveFilters && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {selectedCategory && (
+            <span className="inline-flex items-center gap-1 bg-primary-light/30 text-primary-dark text-xs font-medium px-3 py-1.5 rounded-full">
+              {categories.find((c) => c.slug === selectedCategory)?.name ||
+                categories
+                  .flatMap((c) => c.children)
+                  .find((c) => c.slug === selectedCategory)?.name ||
+                selectedCategory}
+              <button onClick={() => setSelectedCategory("")}>
+                <FiX size={12} />
+              </button>
+            </span>
+          )}
+          {search && (
+            <span className="inline-flex items-center gap-1 bg-accent-light/50 text-accent-dark text-xs font-medium px-3 py-1.5 rounded-full">
+              &ldquo;{search}&rdquo;
+              <button onClick={() => setSearch("")}>
+                <FiX size={12} />
+              </button>
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Results */}
+      {filtered.length === 0 ? (
+        <div className="text-center py-20">
+          <p className="text-gray-400 text-lg mb-2">
+            No encontramos productos
+          </p>
+          <p className="text-gray-400 text-sm">
+            Prob&aacute; cambiando los filtros o buscar otra cosa
+          </p>
+          {hasActiveFilters && (
+            <button
+              onClick={clearFilters}
+              className="mt-4 text-primary font-semibold text-sm hover:underline"
+            >
+              Ver todos los productos
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          <p className="text-xs text-gray-400 mb-4">
+            {filtered.length} producto{filtered.length !== 1 ? "s" : ""}
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            {filtered.map((product) => (
+              <ProductCard
+                key={product.id}
+                id={product.id}
+                name={product.name}
+                slug={product.slug}
+                price={product.price}
+                comparePrice={product.comparePrice}
+                imageUrl={product.imageUrl}
+                images={product.images}
+                isDigital={product.isDigital}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}

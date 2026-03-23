@@ -1,0 +1,263 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+import { motion } from "framer-motion";
+import { FiShoppingBag, FiMinus, FiPlus } from "react-icons/fi";
+import { useCartStore } from "@/store/cart";
+import { formatPrice } from "@/lib/utils";
+import {
+  resolveProductImage,
+  resolveProductImagesGallery,
+} from "@/lib/image-url";
+import Button from "@/components/ui/button";
+import PurchaseInfo from "@/components/product/purchase-info";
+import toast from "react-hot-toast";
+
+interface Variant {
+  id: string;
+  name: string;
+  value: string;
+  price: number | null;
+  stock: number;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  price: number;
+  comparePrice: number | null;
+  images: string[];
+  imageUrl: string | null;
+  variants: Variant[];
+  category: { name: string; slug: string } | null;
+  isDigital: boolean;
+  fileName: string | null;
+}
+
+export default function ProductDetail({ product }: { product: Product }) {
+  const [selectedImage, setSelectedImage] = useState(0);
+  const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const addItem = useCartStore((s) => s.addItem);
+
+  const currentPrice = selectedVariant?.price ?? product.price;
+  const images = resolveProductImagesGallery({
+    imageUrl: product.imageUrl,
+    images: product.images,
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+  });
+
+  const variantGroups = product.variants.reduce<Record<string, Variant[]>>(
+    (acc, v) => {
+      if (!acc[v.name]) acc[v.name] = [];
+      acc[v.name].push(v);
+      return acc;
+    },
+    {}
+  );
+
+  const handleAddToCart = () => {
+    const lineImage = resolveProductImage({
+      imageUrl: product.imageUrl,
+      images: product.images,
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+    });
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price: currentPrice,
+      image: lineImage,
+      variant: selectedVariant?.value,
+      quantity,
+    });
+    toast.success("Agregado al carrito");
+  };
+
+  return (
+    <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+        {/* Images */}
+        <div>
+          <motion.div
+            key={selectedImage}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="relative aspect-square rounded-3xl overflow-hidden bg-soft-gray shadow-sm"
+          >
+            <Image
+              src={images[selectedImage]}
+              alt={product.name}
+              fill
+              className="object-cover"
+              priority
+            />
+            {product.comparePrice && product.comparePrice > product.price && (
+              <span className="absolute top-4 left-4 bg-rose text-white text-xs font-bold px-3 py-1.5 rounded-full shadow">
+                -{Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)}%
+              </span>
+            )}
+          </motion.div>
+          {images.length > 1 && (
+            <div className="flex gap-3 mt-4">
+              {images.map((img, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedImage(i)}
+                  className={`relative w-20 h-20 rounded-xl overflow-hidden border-2 transition-all ${
+                    i === selectedImage
+                      ? "border-primary shadow-md"
+                      : "border-transparent hover:border-primary-light"
+                  }`}
+                >
+                  <Image
+                    src={img}
+                    alt={`${product.name} ${i + 1}`}
+                    fill
+                    className="object-cover"
+                  />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="flex flex-col">
+          {product.category && (
+            <span className="text-sm text-primary font-semibold mb-2 uppercase tracking-wider">
+              {product.category.name}
+            </span>
+          )}
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-warm-gray leading-tight">
+            {product.name}
+          </h1>
+
+          <div className="flex items-center gap-3 mt-4">
+            <span className="text-2xl font-extrabold text-primary-dark">
+              {formatPrice(currentPrice)}
+            </span>
+            {product.comparePrice && product.comparePrice > currentPrice && (
+              <span className="text-lg text-gray-400 line-through">
+                {formatPrice(product.comparePrice)}
+              </span>
+            )}
+          </div>
+
+          {product.description && (
+            <p className="mt-6 text-gray-600 leading-relaxed">
+              {product.description}
+            </p>
+          )}
+
+          {/* Variants */}
+          {Object.entries(variantGroups).map(([name, variants]) => (
+            <div key={name} className="mt-6">
+              <h3 className="text-sm font-semibold text-warm-gray mb-2.5">
+                {name}
+              </h3>
+              <div className="flex flex-wrap gap-2">
+                {variants.map((v) => (
+                  <button
+                    key={v.id}
+                    onClick={() => setSelectedVariant(v)}
+                    className={`px-4 py-2 text-sm rounded-full border-2 transition-all font-medium ${
+                      selectedVariant?.id === v.id
+                        ? "border-primary bg-primary-light/30 text-primary-dark"
+                        : "border-gray-200 text-gray-600 hover:border-primary-light hover:bg-primary-light/10"
+                    }`}
+                  >
+                    {v.value}
+                    {!product.isDigital && v.stock <= 3 && v.stock > 0 && (
+                      <span className="ml-1 text-xs text-rose">
+                        ({v.stock} left)
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {/* Quantity */}
+          {!product.isDigital && (
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-warm-gray mb-2.5">
+                Cantidad
+              </h3>
+              <div className="inline-flex items-center border-2 border-gray-200 rounded-full">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  className="p-2.5 text-gray-500 hover:text-primary-dark transition-colors"
+                >
+                  <FiMinus size={16} />
+                </button>
+                <span className="px-5 text-sm font-bold min-w-[40px] text-center">
+                  {quantity}
+                </span>
+                <button
+                  onClick={() => setQuantity(quantity + 1)}
+                  className="p-2.5 text-gray-500 hover:text-primary-dark transition-colors"
+                >
+                  <FiPlus size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Add to cart */}
+          <div className="mt-8">
+            <Button
+              size="lg"
+              onClick={handleAddToCart}
+              className="w-full sm:w-auto"
+            >
+              <FiShoppingBag className="mr-2" />
+              Agregar al Carrito
+            </Button>
+          </div>
+
+          {/* Extra info */}
+          <div className="mt-8 space-y-3 text-sm text-gray-500">
+            {product.isDigital ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500" />
+                  Descarga protegida desde tu cuenta cuando el pago esté
+                  aprobado
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  Pagos seguros con MercadoPago
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                  Env&iacute;os a todo Uruguay
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  Pagos seguros con MercadoPago
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                  Hecho a mano con amor
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <PurchaseInfo />
+    </div>
+  );
+}

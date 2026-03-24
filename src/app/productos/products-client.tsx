@@ -1,10 +1,16 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { Fragment, useState, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiSearch, FiSliders, FiX } from "react-icons/fi";
 import ProductCard from "@/components/ui/product-card";
+import type { CategoryBranch } from "@/lib/category-tree";
+import {
+  flattenCategorySlugs,
+  getDescendantSlugsForSlug,
+  findCategoryLabelBySlug,
+} from "@/lib/category-tree";
 
 interface Product {
   id: string;
@@ -19,11 +25,28 @@ interface Product {
   category: { name: string; slug: string } | null;
 }
 
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  children: { id: string; name: string; slug: string }[];
+function CategoryOptions({
+  nodes,
+  depth = 0,
+}: {
+  nodes: CategoryBranch[];
+  depth?: number;
+}) {
+  const prefix = depth > 0 ? `${"\u2014 ".repeat(depth)}` : "";
+  return (
+    <>
+      {nodes.map((n) => (
+        <Fragment key={n.id}>
+          <option value={n.slug}>
+            {prefix}
+            {n.name}
+            {n.children.length > 0 ? " (todo)" : ""}
+          </option>
+          <CategoryOptions nodes={n.children} depth={depth + 1} />
+        </Fragment>
+      ))}
+    </>
+  );
 }
 
 export default function ProductsClient({
@@ -31,7 +54,7 @@ export default function ProductsClient({
   categories,
 }: {
   initialProducts: Product[];
-  categories: Category[];
+  categories: CategoryBranch[];
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -57,14 +80,10 @@ export default function ProductsClient({
     router.replace(qs ? `/productos?${qs}` : "/productos", { scroll: false });
   };
 
-  const allCategorySlugs = useMemo(() => {
-    const slugs: string[] = [];
-    categories.forEach((c) => {
-      slugs.push(c.slug);
-      c.children.forEach((s) => slugs.push(s.slug));
-    });
-    return slugs;
-  }, [categories]);
+  const allCategorySlugs = useMemo(
+    () => flattenCategorySlugs(categories),
+    [categories]
+  );
 
   const filtered = useMemo(() => {
     let result = [...initialProducts];
@@ -83,16 +102,14 @@ export default function ProductsClient({
     }
 
     if (selectedCategory && allCategorySlugs.includes(selectedCategory)) {
-      const parentCat = categories.find((c) => c.slug === selectedCategory);
-      if (parentCat) {
-        const childSlugs = parentCat.children.map((ch) => ch.slug);
-        result = result.filter(
-          (p) =>
-            p.category?.slug === selectedCategory ||
-            childSlugs.includes(p.category?.slug || "")
+      const allowed = getDescendantSlugsForSlug(
+        categories,
+        selectedCategory
+      );
+      if (allowed?.length) {
+        result = result.filter((p) =>
+          p.category?.slug ? allowed.includes(p.category.slug) : false
         );
-      } else {
-        result = result.filter((p) => p.category?.slug === selectedCategory);
       }
     }
 
@@ -219,16 +236,7 @@ export default function ProductsClient({
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary"
                   >
                     <option value="">Todas</option>
-                    {categories.map((cat) => (
-                      <optgroup key={cat.id} label={cat.name}>
-                        <option value={cat.slug}>{cat.name} (todo)</option>
-                        {cat.children.map((sub) => (
-                          <option key={sub.id} value={sub.slug}>
-                            {sub.name}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ))}
+                    <CategoryOptions nodes={categories} />
                   </select>
                 </div>
 
@@ -282,10 +290,7 @@ export default function ProductsClient({
         <div className="flex flex-wrap gap-2 mb-4">
           {selectedCategory && (
             <span className="inline-flex items-center gap-1 bg-primary-light/30 text-primary-dark text-xs font-medium px-3 py-1.5 rounded-full">
-              {categories.find((c) => c.slug === selectedCategory)?.name ||
-                categories
-                  .flatMap((c) => c.children)
-                  .find((c) => c.slug === selectedCategory)?.name ||
+              {findCategoryLabelBySlug(categories, selectedCategory) ||
                 selectedCategory}
               <button
                 type="button"

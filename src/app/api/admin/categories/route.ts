@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { slugify } from "@/lib/utils";
+import { invalidateCategoryDescendantCache } from "@/lib/categories";
 
 export async function GET() {
   const { error } = await requireAdmin();
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
         showInNavbar: Boolean(body.showInNavbar) && !body.parentId,
       },
     });
+    invalidateCategoryDescendantCache();
     return NextResponse.json(category);
   } catch (err) {
     console.error("Create category error:", err);

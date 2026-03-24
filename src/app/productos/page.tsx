@@ -3,6 +3,11 @@ import { prisma } from "@/lib/prisma";
 import type { Metadata } from "next";
 import ProductsClient from "./products-client";
 import { getSiteOrigin } from "@/lib/site-url";
+import {
+  buildCategoryTree,
+  getDescendantCategoryIdsFromRows,
+} from "@/lib/categories";
+import type { CategoryBranch } from "@/lib/category-tree";
 
 type PageProps = {
   searchParams: Promise<{ categoria?: string }>;
@@ -62,7 +67,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function ProductosPage() {
+export default async function ProductosPage({ searchParams }: PageProps) {
+  const { categoria } = await searchParams;
+
   let products: {
     id: string;
     name: string;
@@ -76,45 +83,51 @@ export default async function ProductosPage() {
     category: { name: string; slug: string } | null;
   }[] = [];
 
-  let categories: {
-    id: string;
-    name: string;
-    slug: string;
-    children: { id: string; name: string; slug: string }[];
-  }[] = [];
+  let categories: CategoryBranch[] = [];
 
   try {
-    [products, categories] = await Promise.all([
-      prisma.product.findMany({
-        where: { active: true, isOnlineCourse: false },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          price: true,
-          comparePrice: true,
-          images: true,
-          featured: true,
-          isDigital: true,
-          imageUrl: true,
-          category: { select: { name: true, slug: true } },
-        },
-      }),
-      prisma.category.findMany({
-        where: { parentId: null },
-        orderBy: { order: "asc" },
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-          children: {
-            orderBy: { order: "asc" },
-            select: { id: true, name: true, slug: true },
-          },
-        },
-      }),
-    ]);
+    const flat = await prisma.category.findMany({
+      orderBy: [{ order: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        parentId: true,
+        name: true,
+        slug: true,
+        order: true,
+      },
+    });
+    categories = buildCategoryTree(flat);
+
+    let categoryIdsFilter: string[] | undefined;
+    if (categoria) {
+      const match = flat.find((c) => c.slug === categoria);
+      if (match) {
+        categoryIdsFilter = getDescendantCategoryIdsFromRows(flat, match.id);
+      }
+    }
+
+    products = await prisma.product.findMany({
+      where: {
+        active: true,
+        isOnlineCourse: false,
+        ...(categoryIdsFilter?.length
+          ? { categoryId: { in: categoryIdsFilter } }
+          : {}),
+      },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        price: true,
+        comparePrice: true,
+        images: true,
+        featured: true,
+        isDigital: true,
+        imageUrl: true,
+        category: { select: { name: true, slug: true } },
+      },
+    });
   } catch {
     // DB not connected
   }

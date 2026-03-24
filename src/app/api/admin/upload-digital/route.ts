@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { saveDigitalProductFile } from "@/lib/digital-product-upload";
+import { readFormFileBuffer } from "@/lib/read-upload-file";
+
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const { error } = await requireAdmin();
@@ -8,17 +11,23 @@ export async function POST(req: Request) {
 
   try {
     const formData = await req.formData();
-    const file = formData.get("file");
-    if (!file || !(file instanceof Blob)) {
-      return NextResponse.json({ error: "Archivo requerido" }, { status: 400 });
-    }
+    const raw = formData.get("file");
 
-    const buf = Buffer.from(await file.arrayBuffer());
-    const name = (file as File).name || "archivo";
-    const saved = await saveDigitalProductFile(buf, name);
+    const { buffer, type, name, size } = await readFormFileBuffer(raw);
+
+    console.log("UPLOAD DEBUG (digital):");
+    console.log("Type:", type || "(vacío)");
+    console.log("Size:", size);
+    console.log("Buffer length:", buffer.length);
+    console.log("Name:", name);
+
+    const saved = await saveDigitalProductFile(buffer, name);
     return NextResponse.json(saved);
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Error al subir";
+    if (msg.includes("vacío") || msg.includes("inválido") || msg.includes("requerido")) {
+      return NextResponse.json({ error: msg }, { status: 400 });
+    }
     return NextResponse.json({ error: msg }, { status: 400 });
   }
 }

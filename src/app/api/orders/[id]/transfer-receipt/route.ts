@@ -2,7 +2,10 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { saveTransferReceipt } from "@/lib/receipt-upload";
+import { saveTransferReceipt, validateReceiptMime } from "@/lib/receipt-upload";
+import { readFormFileBuffer } from "@/lib/read-upload-file";
+
+export const runtime = "nodejs";
 
 interface Ctx {
   params: Promise<{ id: string }>;
@@ -35,13 +38,56 @@ export async function POST(req: Request, context: Ctx) {
   }
 
   const formData = await req.formData();
-  const file = formData.get("file");
-  if (!file || !(file instanceof Blob)) {
-    return NextResponse.json({ error: "Archivo requerido" }, { status: 400 });
+  const raw = formData.get("file");
+
+  let buf: Buffer;
+  let mime: string;
+  try {
+    const parsed = await readFormFileBuffer(raw);
+    buf = parsed.buffer;
+    mime = (parsed.type || "").trim() || "application/octet-stream";
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Archivo inválido";
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
-  const mime = file.type || "application/octet-stream";
-  const buf = Buffer.from(await file.arrayBuffer());
+  if (!validateReceiptMime(mime)) {
+    const b = buf;
+    if (b.length >= 4 && b.slice(0, 4).toString() === "%PDF") {
+      mime = "application/pdf";
+    } else if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) {
+      mime = "image/jpeg";
+    } else if (
+      b[0] === 0x89 &&
+      b[1] === 0x50 &&
+      b[2] === 0x4e &&
+      b[3] === 0x47
+    ) {
+      mime = "image/png";
+    } else if (b.slice(0, 3).toString("ascii") === "GIF") {
+      mime = "image/gif";
+    } else if (
+      b.length >= 12 &&
+      b.slice(0, 4).toString("ascii") === "RIFF" &&
+      b.slice(8, 12).toString("ascii") === "WEBP"
+    ) {
+      mime = "image/webp";
+    }
+  }
+
+  if (!validateReceiptMime(mime)) {
+    return NextResponse.json(
+      { error: "Formato no permitido (solo imagen o PDF)" },
+      { status: 400 }
+    );
+  }
+
+  const filepathGuess = `transfer-receipts/${order.id}-${Date.now()}`;
+
+  console.log("UPLOAD DEBUG (comprobante):");
+  console.log("Type:", mime);
+  console.log("Buffer length:", buf.length);
+  console.log("Path:", filepathGuess);
 
   try {
     const url = await saveTransferReceipt(order.id, buf, mime);

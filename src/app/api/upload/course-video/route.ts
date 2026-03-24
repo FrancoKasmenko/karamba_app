@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
-import { mkdir, writeFile } from "fs/promises";
+import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
+import { readFormFileBuffer } from "@/lib/read-upload-file";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -16,15 +17,23 @@ export async function POST(req: Request) {
 
   try {
     const formData = await req.formData();
-    const file = formData.get("file");
-    if (!file || !(file instanceof File)) {
-      return NextResponse.json(
-        { error: "No se envió ningún archivo" },
-        { status: 400 }
-      );
+    const raw = formData.get("file");
+
+    let buffer: Buffer;
+    let name: string;
+    let size: number;
+    let mime: string;
+    try {
+      const parsed = await readFormFileBuffer(raw);
+      buffer = parsed.buffer;
+      name = parsed.name;
+      size = parsed.size;
+      mime = (parsed.type || "").toLowerCase();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "No se envió ningún archivo";
+      return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    const name = file.name || "";
     const ext = path.extname(name).toLowerCase();
     if (ext !== ".mp4") {
       return NextResponse.json(
@@ -33,7 +42,6 @@ export async function POST(req: Request) {
       );
     }
 
-    const mime = (file.type || "").toLowerCase();
     if (mime && mime !== "video/mp4") {
       return NextResponse.json(
         { error: "Formato no válido. Usá MP4 (video/mp4)." },
@@ -41,19 +49,11 @@ export async function POST(req: Request) {
       );
     }
 
-    if (file.size > MAX_BYTES) {
+    if (size > MAX_BYTES || buffer.length > MAX_BYTES) {
       return NextResponse.json(
         {
           error: `El archivo supera el máximo permitido (${Math.round(MAX_BYTES / (1024 * 1024))} MB)`,
         },
-        { status: 400 }
-      );
-    }
-
-    const bytes = await file.arrayBuffer();
-    if (bytes.byteLength > MAX_BYTES) {
-      return NextResponse.json(
-        { error: "El archivo supera el tamaño máximo" },
         { status: 400 }
       );
     }
@@ -65,9 +65,16 @@ export async function POST(req: Request) {
       "uploads",
       "course-videos"
     );
-    await mkdir(uploadDir, { recursive: true });
+    mkdirSync(uploadDir, { recursive: true });
     const filepath = path.join(uploadDir, filename);
-    await writeFile(filepath, Buffer.from(bytes));
+
+    console.log("UPLOAD DEBUG (course-video):");
+    console.log("Type:", mime || "(vacío)");
+    console.log("Size:", size);
+    console.log("Buffer length:", buffer.length);
+    console.log("Path:", filepath);
+
+    writeFileSync(filepath, buffer);
 
     return NextResponse.json({ url: `${REL_PREFIX}${filename}` });
   } catch (err) {

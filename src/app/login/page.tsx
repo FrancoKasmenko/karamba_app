@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -18,6 +18,7 @@ function safeNextPath(raw: string | null): string {
 function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { update: updateSession } = useSession();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
 
@@ -26,20 +27,22 @@ function LoginPageInner() {
     setLoading(true);
 
     const res = await signIn("credentials", {
-      email: form.email,
+      email: form.email.trim(),
       password: form.password,
       redirect: false,
     });
 
-    setLoading(false);
-
     if (res?.error) {
+      setLoading(false);
       toast.error("Email o contrase\u00f1a incorrectos");
-    } else {
-      toast.success("\u00a1Bienvenido/a!");
-      router.push(safeNextPath(searchParams.get("callbackUrl")));
-      router.refresh();
+      return;
     }
+
+    await updateSession();
+    setLoading(false);
+    toast.success("\u00a1Bienvenido/a!");
+    router.push(safeNextPath(searchParams.get("callbackUrl")));
+    router.refresh();
   };
 
   return (
@@ -98,6 +101,15 @@ function LoginPageInner() {
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm bg-soft-gray/30"
                 placeholder="Tu contraseña"
               />
+            </div>
+
+            <div className="text-right -mt-2">
+              <Link
+                href="/login/olvide-contrasena"
+                className="text-sm font-medium text-primary-dark hover:underline"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
             </div>
 
             <Button

@@ -4,12 +4,14 @@ import { formatPrice } from "@/lib/utils";
 import {
   emailButton,
   emailShell,
+  emailStyles,
   escapeHtml,
 } from "@/lib/email-layout";
 import { sendTransactionalEmail } from "@/lib/email-send";
 
 export const EmailEventType = {
   AUTH_WELCOME: "AUTH_WELCOME",
+  AUTH_PASSWORD_RESET_REQUEST: "AUTH_PASSWORD_RESET_REQUEST",
   AUTH_PASSWORD_CHANGED: "AUTH_PASSWORD_CHANGED",
   ORDER_CREATED: "ORDER_CREATED",
   ORDER_PAID: "ORDER_PAID",
@@ -25,6 +27,33 @@ function certUrl(courseId: string): string {
 
 export function fireAndForget(p: Promise<unknown>): void {
   void p.catch((e) => console.error("[EMAIL] fireAndForget:", e));
+}
+
+export async function notifyPasswordResetRequest(
+  to: string,
+  name: string | null,
+  resetUrl: string
+): Promise<void> {
+  const html = emailShell({
+    title: "Restablecer contraseña",
+    preheader: "Enlace válido por 1 hora",
+    innerHtml: `
+      <p style="margin:0 0 16px;font-size:16px;">Hola ${escapeHtml(name || "")},</p>
+      <p style="margin:0 0 24px;font-size:15px;line-height:1.55;">Recibimos una solicitud para restablecer tu contraseña en <strong>Karamba</strong>. Si no fuiste vos, ignorá este mensaje.</p>
+      <div style="text-align:center;margin:28px 0;">
+        ${emailButton(resetUrl, "Elegir nueva contraseña")}
+      </div>
+      <p style="margin:0;font-size:13px;color:${emailStyles.MUTED};">El enlace expira en 1 hora.</p>
+    `,
+  });
+
+  await sendTransactionalEmail({
+    to,
+    subject: "Karamba — Restablecer contraseña",
+    html,
+    eventType: EmailEventType.AUTH_PASSWORD_RESET_REQUEST,
+    dedupeKey: `reset:${to}:${Date.now()}`,
+  });
 }
 
 export async function notifyPasswordChangedEmail(userId: string): Promise<void> {

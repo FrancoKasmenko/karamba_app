@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
+import { normalizeEmail } from "@/lib/sanitize";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -10,6 +11,7 @@ import toast from "react-hot-toast";
 
 export default function RegistroPage() {
   const router = useRouter();
+  const { update: updateSession } = useSession();
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -52,12 +54,23 @@ export default function RegistroPage() {
         return;
       }
 
-      await signIn("credentials", {
-        email: form.email,
+      const emailNorm = normalizeEmail(form.email);
+      const signInResult = await signIn("credentials", {
+        email: emailNorm || form.email.trim().toLowerCase(),
         password: form.password,
         redirect: false,
       });
 
+      if (signInResult?.error) {
+        toast.success(
+          "Cuenta creada. Ingresá con tu email y contraseña desde Iniciar sesión."
+        );
+        router.push("/login");
+        setLoading(false);
+        return;
+      }
+
+      await updateSession();
       toast.success("¡Cuenta creada exitosamente!");
       router.push("/");
       router.refresh();

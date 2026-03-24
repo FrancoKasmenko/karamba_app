@@ -1,0 +1,32 @@
+services:
+  app:
+    build: .
+    container_name: karamba_app
+    ports:
+      - "3000:3000"
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  db:
+    image: postgres:15
+    container_name: karamba_db
+    restart: always
+    environment:
+      POSTGRES_DB: karamba
+      POSTGRES_USER: karamba
+      POSTGRES_PASSWORD: Majo1984_
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U karamba -d karamba"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db_data:

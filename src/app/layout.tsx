@@ -5,6 +5,8 @@ import Providers from "@/components/providers";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 
+export const dynamic = "force-dynamic";
+
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800"],

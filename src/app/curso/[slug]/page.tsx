@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { userHasOnlineCourseAccess } from "@/lib/online-course-access";
 import OnlineCoursePublic from "./online-course-public";
+import { toAbsoluteUrl } from "@/lib/site-url";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -14,12 +15,35 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const course = await prisma.onlineCourse.findUnique({
     where: { slug },
-    select: { title: true, description: true, isPublished: true },
+    select: {
+      title: true,
+      description: true,
+      image: true,
+      isPublished: true,
+    },
   });
   if (!course?.isPublished) return { title: "Curso" };
+  const description =
+    course.description?.replace(/<[^>]*>/g, " ").trim().slice(0, 160) ||
+    course.title;
+  const ogImage = course.image
+    ? toAbsoluteUrl(course.image)
+    : toAbsoluteUrl("/brand/icon.png");
   return {
     title: `${course.title} | Cursos online`,
-    description: course.description?.slice(0, 160) || course.title,
+    description,
+    openGraph: {
+      title: course.title,
+      description,
+      type: "website",
+      images: [{ url: ogImage, alt: course.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: course.title,
+      description,
+      images: [ogImage],
+    },
   };
 }
 

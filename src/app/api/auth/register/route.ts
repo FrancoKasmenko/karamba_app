@@ -1,18 +1,36 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { fireAndForget, notifyWelcomeEmail } from "@/lib/email-events";
+import { normalizeEmail, sanitizePlainText } from "@/lib/sanitize";
+
+const BCRYPT_ROUNDS = 12;
+
+const bodySchema = z.object({
+  name: z.string().max(120).optional(),
+  email: z.string().email().max(254),
+  password: z.string().min(8).max(128),
+});
 
 export async function POST(req: Request) {
   try {
-    const { name, email, password } = await req.json();
-
-    if (!email || !password) {
+    const json = await req.json();
+    const parsed = bodySchema.safeParse(json);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: "Email y contraseña son requeridos" },
+        { error: "Datos inválidos. Revisá email y contraseña." },
         { status: 400 }
       );
     }
+
+    const email = normalizeEmail(parsed.data.email);
+    if (!email) {
+      return NextResponse.json({ error: "Email inválido" }, { status: 400 });
+    }
+
+    const name = sanitizePlainText(parsed.data.name, 120);
+    const password = parsed.data.password;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -22,10 +40,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
     const user = await prisma.user.create({
-      data: { name, email, hashedPassword },
+      data: { name: name ?? null, email, hashedPassword },
     });
 
     fireAndForget(notifyWelcomeEmail(user.id));

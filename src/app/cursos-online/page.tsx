@@ -7,8 +7,18 @@ import { levelLabel } from "@/lib/online-course-labels";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Cursos online | Karamba",
-  description: "Cursos grabados: aprendé a tu ritmo.",
+  title: "Cursos online",
+  description: "Cursos grabados: aprendé a tu ritmo con Karamba.",
+  openGraph: {
+    title: "Cursos online | Karamba",
+    description: "Cursos grabados: aprendé a tu ritmo con Karamba.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Cursos online | Karamba",
+    description: "Cursos grabados: aprendé a tu ritmo con Karamba.",
+  },
 };
 
 export default async function CursosOnlinePage() {

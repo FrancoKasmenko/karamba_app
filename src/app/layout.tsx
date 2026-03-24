@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "@/components/providers";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
+import { getMetadataBase, getSiteOrigin, toAbsoluteUrl } from "@/lib/site-url";
 
 export const dynamic = "force-dynamic";
 
@@ -13,13 +14,17 @@ const poppins = Poppins({
   variable: "--font-sans",
 });
 
+const defaultTitle = "Karamba | Productos Artesanales con Amor";
+const defaultDescription =
+  "Descubrí productos artesanales únicos, hechos con amor y dedicación. Karamba - creamos para vos desde el corazón.";
+
 export const metadata: Metadata = {
+  metadataBase: getMetadataBase(),
   title: {
-    default: "Karamba | Productos Artesanales con Amor",
+    default: defaultTitle,
     template: "%s | Karamba",
   },
-  description:
-    "Descubrí productos artesanales únicos, hechos con amor y dedicación. Karamba - creamos para vos desde el corazón.",
+  description: defaultDescription,
   keywords: [
     "karamba",
     "artesanal",
@@ -30,14 +35,24 @@ export const metadata: Metadata = {
     "regalos",
     "decoracion",
   ],
+  icons: {
+    icon: [{ url: "/brand/icon.png", type: "image/png" }],
+    apple: "/brand/icon.png",
+  },
   openGraph: {
-    title: "Karamba | Productos Artesanales con Amor",
-    description:
-      "Descubrí productos artesanales únicos, hechos con amor y dedicación.",
-    url: "https://karamba.com.uy",
+    title: defaultTitle,
+    description: defaultDescription,
+    url: getSiteOrigin(),
     siteName: "Karamba",
     locale: "es_UY",
     type: "website",
+    images: [{ url: toAbsoluteUrl("/brand/icon.png"), width: 512, height: 512, alt: "Karamba" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: defaultTitle,
+    description: defaultDescription,
+    images: [toAbsoluteUrl("/brand/icon.png")],
   },
 };
 

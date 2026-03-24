@@ -2,12 +2,65 @@ import { Suspense } from "react";
 import { prisma } from "@/lib/prisma";
 import type { Metadata } from "next";
 import ProductsClient from "./products-client";
+import { getSiteOrigin } from "@/lib/site-url";
 
-export const metadata: Metadata = {
-  title: "Productos",
-  description:
-    "Explorá nuestra colección completa de productos artesanales Karamba.",
+type PageProps = {
+  searchParams: Promise<{ categoria?: string }>;
 };
+
+export async function generateMetadata({
+  searchParams,
+}: PageProps): Promise<Metadata> {
+  const { categoria } = await searchParams;
+  const baseDesc =
+    "Explorá nuestra colección completa de productos artesanales Karamba.";
+  if (!categoria) {
+    return {
+      title: "Productos",
+      description: baseDesc,
+      openGraph: {
+        title: "Productos",
+        description: baseDesc,
+        url: `${getSiteOrigin()}/productos`,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: "Productos | Karamba",
+        description: baseDesc,
+      },
+    };
+  }
+  try {
+    const cat = await prisma.category.findFirst({
+      where: { slug: categoria },
+      select: { name: true },
+    });
+    if (cat) {
+      const title = `${cat.name} — Productos`;
+      const description = `Productos de ${cat.name}. ${baseDesc}`;
+      return {
+        title,
+        description,
+        openGraph: {
+          title,
+          description,
+          url: `${getSiteOrigin()}/productos?categoria=${encodeURIComponent(categoria)}`,
+        },
+        twitter: {
+          card: "summary_large_image",
+          title,
+          description,
+        },
+      };
+    }
+  } catch {
+    /* DB no disponible en build */
+  }
+  return {
+    title: "Productos",
+    description: baseDesc,
+  };
+}
 
 export default async function ProductosPage() {
   let products: {
@@ -67,11 +120,14 @@ export default async function ProductosPage() {
   }
 
   return (
-    <Suspense fallback={<div className="py-20 text-center text-gray-400">Cargando productos...</div>}>
-      <ProductsClient
-        initialProducts={products}
-        categories={categories}
-      />
+    <Suspense
+      fallback={
+        <div className="py-20 text-center text-gray-400">
+          Cargando productos...
+        </div>
+      }
+    >
+      <ProductsClient initialProducts={products} categories={categories} />
     </Suspense>
   );
 }

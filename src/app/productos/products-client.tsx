@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiSearch, FiSliders, FiX } from "react-icons/fi";
@@ -44,6 +44,18 @@ export default function ProductsClient({
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 99999]);
   const [sortBy, setSortBy] = useState<string>("newest");
   const [filtersOpen, setFiltersOpen] = useState(false);
+
+  useEffect(() => {
+    setSelectedCategory(searchParams.get("categoria") || "");
+    setSearch(searchParams.get("q") || "");
+  }, [searchParams]);
+
+  const replaceProductosQuery = (mutate: (p: URLSearchParams) => void) => {
+    const p = new URLSearchParams(searchParams.toString());
+    mutate(p);
+    const qs = p.toString();
+    router.replace(qs ? `/productos?${qs}` : "/productos", { scroll: false });
+  };
 
   const allCategorySlugs = useMemo(() => {
     const slugs: string[] = [];
@@ -115,11 +127,9 @@ export default function ProductsClient({
   ]);
 
   const clearFilters = () => {
-    setSearch("");
-    setSelectedCategory("");
     setPriceRange([0, 99999]);
     setSortBy("newest");
-    if (nuevosOnly) router.push("/productos");
+    router.replace("/productos", { scroll: false });
   };
 
   const hasActiveFilters =
@@ -199,7 +209,13 @@ export default function ProductsClient({
                   </label>
                   <select
                     value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      replaceProductosQuery((p) => {
+                        if (v) p.set("categoria", v);
+                        else p.delete("categoria");
+                      });
+                    }}
                     className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-primary"
                   >
                     <option value="">Todas</option>
@@ -271,7 +287,12 @@ export default function ProductsClient({
                   .flatMap((c) => c.children)
                   .find((c) => c.slug === selectedCategory)?.name ||
                 selectedCategory}
-              <button onClick={() => setSelectedCategory("")}>
+              <button
+                type="button"
+                onClick={() =>
+                  replaceProductosQuery((p) => p.delete("categoria"))
+                }
+              >
                 <FiX size={12} />
               </button>
             </span>
@@ -279,7 +300,10 @@ export default function ProductsClient({
           {search && (
             <span className="inline-flex items-center gap-1 bg-accent-light/50 text-accent-dark text-xs font-medium px-3 py-1.5 rounded-full">
               &ldquo;{search}&rdquo;
-              <button onClick={() => setSearch("")}>
+              <button
+                type="button"
+                onClick={() => replaceProductosQuery((p) => p.delete("q"))}
+              >
                 <FiX size={12} />
               </button>
             </span>

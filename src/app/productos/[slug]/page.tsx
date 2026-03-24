@@ -2,9 +2,16 @@ import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import ProductDetail from "./product-detail";
+import { toAbsoluteUrl } from "@/lib/site-url";
 
 interface Props {
   params: Promise<{ slug: string }>;
+}
+
+function plainTextDescription(htmlOrText: string | null, fallback: string) {
+  if (!htmlOrText) return fallback;
+  const t = htmlOrText.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return t.slice(0, 160) || fallback;
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -12,12 +19,40 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   try {
     const product = await prisma.product.findUnique({
       where: { slug },
-      select: { name: true, description: true },
+      select: {
+        name: true,
+        description: true,
+        images: true,
+        imageUrl: true,
+      },
     });
     if (!product) return { title: "Producto no encontrado" };
+    const description = plainTextDescription(
+      product.description,
+      `${product.name} - Karamba`
+    );
+    const firstImg =
+      product.imageUrl?.trim() ||
+      product.images?.find((x) => String(x).trim()) ||
+      "";
+    const ogImage = firstImg
+      ? toAbsoluteUrl(String(firstImg))
+      : toAbsoluteUrl("/brand/icon.png");
     return {
       title: product.name,
-      description: product.description || `${product.name} - Karamba`,
+      description,
+      openGraph: {
+        title: product.name,
+        description,
+        type: "website",
+        images: [{ url: ogImage, alt: product.name }],
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: product.name,
+        description,
+        images: [ogImage],
+      },
     };
   } catch {
     return { title: "Producto" };

@@ -96,7 +96,7 @@ function LoginPageInner() {
                   setForm({ ...form, password: e.target.value })
                 }
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm bg-soft-gray/30"
-                placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
+                placeholder="Tu contraseña"
               />
             </div>
 

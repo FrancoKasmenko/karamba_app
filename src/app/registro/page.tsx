@@ -26,8 +26,8 @@ export default function RegistroPage() {
       return;
     }
 
-    if (form.password.length < 6) {
-      toast.error("La contraseña debe tener al menos 6 caracteres");
+    if (form.password.length < 8) {
+      toast.error("La contraseña debe tener al menos 8 caracteres");
       return;
     }
 
@@ -122,7 +122,7 @@ export default function RegistroPage() {
                 value={form.password}
                 onChange={(e) => setForm({ ...form, password: e.target.value })}
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres"
               />
             </div>
 

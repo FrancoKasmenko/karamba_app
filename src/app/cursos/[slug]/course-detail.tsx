@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
+import { isLocalUploadPath } from "@/lib/image-url";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -146,6 +147,7 @@ export default function CourseDetail() {
                       src={course.image}
                       alt={course.title}
                       fill
+                      unoptimized={isLocalUploadPath(course.image)}
                       className="object-cover"
                       priority
                     />

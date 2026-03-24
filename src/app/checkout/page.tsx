@@ -7,7 +7,7 @@ import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
-import { resolveStoredProductImage } from "@/lib/image-url";
+import { resolveStoredProductImage, isLocalUploadPath } from "@/lib/image-url";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -877,6 +877,9 @@ export default function CheckoutPage() {
                         src={resolveStoredProductImage(item.image)}
                         alt={item.name}
                         fill
+                        unoptimized={isLocalUploadPath(
+                          resolveStoredProductImage(item.image)
+                        )}
                         className="object-cover"
                         sizes="56px"
                       />

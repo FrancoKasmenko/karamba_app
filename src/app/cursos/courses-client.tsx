@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { isLocalUploadPath } from "@/lib/image-url";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { FiCalendar, FiClock, FiUsers } from "react-icons/fi";
@@ -108,6 +109,7 @@ export default function CoursesClient() {
                             src={course.image}
                             alt={course.title}
                             fill
+                            unoptimized={isLocalUploadPath(course.image)}
                             className="object-cover group-hover:scale-105 transition-transform duration-500"
                           />
                         ) : (

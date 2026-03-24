@@ -1,6 +1,13 @@
 /** Fallback local si no hay imagen válida (colocar en /public/no-image.png). */
 export const NO_PRODUCT_IMAGE = "/no-image.png";
 
+/** Rutas bajo /uploads/*: servir sin optimizador next/image (evita 400 en prod/Docker). */
+export function isLocalUploadPath(src: string): boolean {
+  const t = src.trim();
+  if (!t) return false;
+  return t.startsWith("/uploads/") || t.startsWith("uploads/");
+}
+
 const DEBUG =
   process.env.NODE_ENV === "development" &&
   (process.env.NEXT_PUBLIC_DEBUG_PRODUCT_IMAGES === "1" ||

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
-import { resolveMediaPath } from "@/lib/image-url";
+import { resolveMediaPath, isLocalUploadPath } from "@/lib/image-url";
 import { formatPrice } from "@/lib/utils";
 import { levelLabel } from "@/lib/online-course-labels";
 import type { Metadata } from "next";
@@ -63,6 +63,7 @@ export default async function CursosOnlinePage() {
                       src={img}
                       alt=""
                       fill
+                      unoptimized={isLocalUploadPath(img)}
                       className="object-cover group-hover:scale-[1.02] transition-transform duration-300"
                       sizes="(max-width: 768px) 100vw, 33vw"
                     />

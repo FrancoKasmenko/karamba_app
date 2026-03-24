@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
-import { resolveProductImage } from "@/lib/image-url";
+import { resolveProductImage, isLocalUploadPath } from "@/lib/image-url";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
 import {
@@ -333,7 +333,17 @@ export default function OrderDetailPage({
               </h2>
             </div>
             <div className="space-y-3">
-              {order.items.map((item) => (
+              {order.items.map((item) => {
+                const productThumbSrc = item.product
+                  ? resolveProductImage({
+                      imageUrl: item.product.imageUrl,
+                      images: item.product.images,
+                      id: item.productId ?? undefined,
+                      name: item.productName,
+                      slug: item.product.slug,
+                    })
+                  : "";
+                return (
                 <div
                   key={item.id}
                   className="flex gap-3 p-3 rounded-xl bg-soft-gray/50"
@@ -341,15 +351,10 @@ export default function OrderDetailPage({
                   <div className="relative w-14 h-14 rounded-lg overflow-hidden bg-gray-100 shrink-0">
                     {item.product ? (
                       <Image
-                        src={resolveProductImage({
-                          imageUrl: item.product.imageUrl,
-                          images: item.product.images,
-                          id: item.productId ?? undefined,
-                          name: item.productName,
-                          slug: item.product.slug,
-                        })}
+                        src={productThumbSrc}
                         alt={item.productName}
                         fill
+                        unoptimized={isLocalUploadPath(productThumbSrc)}
                         className="object-cover"
                         sizes="56px"
                       />
@@ -400,7 +405,8 @@ export default function OrderDetailPage({
                     {formatPrice(item.price * item.quantity)}
                   </p>
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Totals */}

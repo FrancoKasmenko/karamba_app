@@ -14,6 +14,10 @@ export async function readFormFileBuffer(file: unknown): Promise<{
     throw new Error("Archivo requerido o inválido");
   }
 
+  if (typeof file.size === "number" && file.size <= 0) {
+    throw new Error("Archivo vacío o inválido");
+  }
+
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 

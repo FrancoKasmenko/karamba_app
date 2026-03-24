@@ -7,6 +7,8 @@ import { readFormFileBuffer } from "@/lib/read-upload-file";
 
 export const runtime = "nodejs";
 
+const REL_DIR = "/uploads/products";
+
 function extFromMime(type: string): string {
   const t = type.toLowerCase();
   if (t.includes("png")) return ".png";
@@ -49,7 +51,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No se enviaron archivos" }, { status: 400 });
     }
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
+    const uploadDir = path.join(process.cwd(), "public", "uploads", "products");
     mkdirSync(uploadDir, { recursive: true });
 
     const urls: string[] = [];
@@ -75,6 +77,7 @@ export async function POST(req: Request) {
         path.extname(name) || (type ? extFromMime(type) : ".png") || ".png";
       const filename = `${randomUUID()}${ext}`;
       const filepath = path.join(uploadDir, filename);
+      const publicUrl = `${REL_DIR}/${filename}`;
 
       console.log("UPLOAD DEBUG:");
       console.log("Type:", type || "(vacío)");
@@ -84,10 +87,13 @@ export async function POST(req: Request) {
 
       writeFileSync(filepath, buffer);
 
-      urls.push(`/uploads/${filename}`);
+      urls.push(publicUrl);
     }
 
-    return NextResponse.json({ urls });
+    return NextResponse.json({
+      urls,
+      ...(urls.length > 0 ? { url: urls[0] } : {}),
+    });
   } catch (err) {
     console.error("Upload error:", err);
     const msg = err instanceof Error ? err.message : "Error al subir archivos";

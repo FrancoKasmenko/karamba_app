@@ -9,6 +9,7 @@ import { formatPrice } from "@/lib/utils";
 import {
   resolveProductImage,
   resolveProductImagesGallery,
+  isLocalUploadPath,
 } from "@/lib/image-url";
 import Button from "@/components/ui/button";
 import PurchaseInfo from "@/components/product/purchase-info";
@@ -95,6 +96,7 @@ export default function ProductDetail({ product }: { product: Product }) {
               src={images[selectedImage]}
               alt={product.name}
               fill
+              unoptimized={isLocalUploadPath(images[selectedImage])}
               className="object-cover"
               priority
             />
@@ -120,6 +122,7 @@ export default function ProductDetail({ product }: { product: Product }) {
                     src={img}
                     alt={`${product.name} ${i + 1}`}
                     fill
+                    unoptimized={isLocalUploadPath(img)}
                     className="object-cover"
                   />
                 </button>

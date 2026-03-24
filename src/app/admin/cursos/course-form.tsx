@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { isLocalUploadPath } from "@/lib/image-url";
 import { FiUpload, FiX, FiLoader } from "react-icons/fi";
 
 interface CourseFormProps {
@@ -159,6 +160,7 @@ export default function CourseForm({ initialData }: CourseFormProps) {
               src={form.image}
               alt="Preview"
               fill
+              unoptimized={isLocalUploadPath(form.image)}
               className="object-cover"
             />
             <button

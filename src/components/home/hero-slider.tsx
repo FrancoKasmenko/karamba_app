@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import { isLocalUploadPath } from "@/lib/image-url";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
@@ -97,6 +98,7 @@ export default function HeroSlider({ banners }: { banners?: BannerFromDB[] }) {
               src={slide.image}
               alt="Karamba"
               fill
+              unoptimized={isLocalUploadPath(slide.image)}
               className="object-cover rounded-2xl"
               priority={current === 0}
               sizes="100vw"

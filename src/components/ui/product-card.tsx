@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { formatPrice } from "@/lib/utils";
-import { resolveProductImage } from "@/lib/image-url";
+import { resolveProductImage, isLocalUploadPath } from "@/lib/image-url";
 
 interface ProductCardProps {
   id: string;
@@ -47,6 +47,7 @@ export default function ProductCard({
             src={src}
             alt={name}
             fill
+            unoptimized={isLocalUploadPath(src)}
             className="object-cover transition-transform duration-500 group-hover:scale-110"
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />

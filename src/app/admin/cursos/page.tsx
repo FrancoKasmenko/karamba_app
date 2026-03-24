@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { isLocalUploadPath } from "@/lib/image-url";
 import { FiPlus, FiEdit, FiTrash2, FiCalendar, FiUsers, FiEye, FiEyeOff } from "react-icons/fi";
 import { formatPrice } from "@/lib/utils";
 
@@ -102,6 +103,7 @@ export default function AdminCoursesPage() {
                       alt={course.title}
                       width={64}
                       height={64}
+                      unoptimized={isLocalUploadPath(course.image)}
                       className="w-full h-full object-cover"
                     />
                   ) : (

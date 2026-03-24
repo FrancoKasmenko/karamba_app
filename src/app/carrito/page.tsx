@@ -6,7 +6,7 @@ import Link from "next/link";
 import { FiTrash2, FiMinus, FiPlus, FiShoppingBag } from "react-icons/fi";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
-import { resolveStoredProductImage } from "@/lib/image-url";
+import { resolveStoredProductImage, isLocalUploadPath } from "@/lib/image-url";
 import Button from "@/components/ui/button";
 
 export default function CarritoPage() {
@@ -49,6 +49,9 @@ export default function CarritoPage() {
                 src={resolveStoredProductImage(item.image)}
                 alt={item.name}
                 fill
+                unoptimized={isLocalUploadPath(
+                  resolveStoredProductImage(item.image)
+                )}
                 className="object-cover"
               />
             </div>

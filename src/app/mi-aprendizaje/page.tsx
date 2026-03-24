@@ -4,7 +4,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { resolveMediaPath } from "@/lib/image-url";
+import { resolveMediaPath, isLocalUploadPath } from "@/lib/image-url";
 import { levelLabel } from "@/lib/online-course-labels";
 import Button from "@/components/ui/button";
 import CourseCertificateButton from "@/components/learning/course-certificate-button";
@@ -73,6 +73,7 @@ export default async function MiAprendizajePage() {
                     src={img}
                     alt=""
                     fill
+                    unoptimized={isLocalUploadPath(img)}
                     className="object-cover"
                     sizes="144px"
                   />

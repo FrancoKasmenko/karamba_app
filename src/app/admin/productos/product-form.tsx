@@ -6,7 +6,7 @@ import Image from "next/image";
 import { FiPlus, FiTrash2, FiUpload, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
-import { resolveStoredProductImage } from "@/lib/image-url";
+import { resolveStoredProductImage, isLocalUploadPath } from "@/lib/image-url";
 
 interface Variant {
   name: string;
@@ -431,6 +431,9 @@ export default function ProductForm({
                 src={resolveStoredProductImage(img)}
                 alt={`Imagen ${i + 1}`}
                 fill
+                unoptimized={isLocalUploadPath(
+                  resolveStoredProductImage(img)
+                )}
                 className="object-cover"
                 sizes="200px"
               />

@@ -6,7 +6,7 @@ import Image from "next/image";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
 import { FiPlus, FiTrash2, FiX } from "react-icons/fi";
-import { resolveMediaPath } from "@/lib/image-url";
+import { resolveMediaPath, isLocalUploadPath } from "@/lib/image-url";
 
 const MAX_COURSE_VIDEO_MB = 300;
 
@@ -323,6 +323,9 @@ export default function OnlineCourseForm({
                     src={resolveMediaPath(form.image.trim())}
                     alt="Portada"
                     fill
+                    unoptimized={isLocalUploadPath(
+                      resolveMediaPath(form.image.trim())
+                    )}
                     className="object-cover"
                     sizes="144px"
                   />

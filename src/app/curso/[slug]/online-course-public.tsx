@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { resolveMediaPath } from "@/lib/image-url";
+import { resolveMediaPath, isLocalUploadPath } from "@/lib/image-url";
 import { formatPrice } from "@/lib/utils";
 import { levelLabel } from "@/lib/online-course-labels";
 import Button from "@/components/ui/button";
@@ -67,6 +67,7 @@ export default function OnlineCoursePublic({
                 src={img}
                 alt=""
                 fill
+                unoptimized={isLocalUploadPath(img)}
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 40vw"
                 priority

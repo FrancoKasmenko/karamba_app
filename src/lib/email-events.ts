@@ -32,8 +32,9 @@ export function fireAndForget(p: Promise<unknown>): void {
 export async function notifyPasswordResetRequest(
   to: string,
   name: string | null,
-  resetUrl: string
-): Promise<void> {
+  resetUrl: string,
+  dedupeKey: string
+): Promise<{ ok: boolean; error?: string; skipped?: boolean }> {
   const html = emailShell({
     title: "Restablecer contraseña",
     preheader: "Enlace válido por 1 hora",
@@ -47,13 +48,29 @@ export async function notifyPasswordResetRequest(
     `,
   });
 
-  await sendTransactionalEmail({
+  const result = await sendTransactionalEmail({
     to,
     subject: "Karamba — Restablecer contraseña",
     html,
     eventType: EmailEventType.AUTH_PASSWORD_RESET_REQUEST,
-    dedupeKey: `reset:${to}:${Date.now()}`,
+    dedupeKey,
   });
+
+  if (!result.ok) {
+    console.error(
+      "[EMAIL] notifyPasswordResetRequest falló:",
+      "error" in result ? result.error : result
+    );
+    return { ok: false, error: "error" in result ? result.error : "unknown" };
+  }
+  if (result.skipped) {
+    console.warn("[EMAIL] notifyPasswordResetRequest omitido (dedupe/sin proveedor)", {
+      to,
+      dedupeKey,
+    });
+    return { ok: true, skipped: true };
+  }
+  return { ok: true };
 }
 
 export async function notifyPasswordChangedEmail(userId: string): Promise<void> {

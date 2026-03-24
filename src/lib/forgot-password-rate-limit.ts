@@ -1,5 +1,5 @@
 const WINDOW_MS = 60 * 60 * 1000;
-const MAX_PER_KEY = 5;
+const MAX_PER_KEY = 15;
 
 type Entry = { count: number; windowStart: number };
 

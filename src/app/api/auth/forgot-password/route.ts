@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { normalizeEmail } from "@/lib/sanitize";
-import { fireAndForget, notifyPasswordResetRequest } from "@/lib/email-events";
+import { notifyPasswordResetRequest } from "@/lib/email-events";
 import { getBaseUrl } from "@/lib/base-url";
 import { checkForgotPasswordRateLimit } from "@/lib/forgot-password-rate-limit";
 import { isEmailConfigured } from "@/lib/email-transport";
@@ -32,9 +32,11 @@ export async function POST(req: Request) {
       "unknown";
 
     if (!checkForgotPasswordRateLimit(`ip:${ip}`)) {
+      console.warn("[forgot-password] rate limit IP:", ip);
       return NextResponse.json(generic);
     }
     if (!checkForgotPasswordRateLimit(`email:${email}`)) {
+      console.warn("[forgot-password] rate limit email:", email);
       return NextResponse.json(generic);
     }
 
@@ -58,19 +60,28 @@ export async function POST(req: Request) {
       }),
     ]);
 
-    if (isEmailConfigured()) {
-      const resetUrl = `${getBaseUrl()}/login/restablecer-contrasena?token=${encodeURIComponent(rawToken)}`;
-      fireAndForget(
-        notifyPasswordResetRequest(user.email, user.name, resetUrl)
-      );
-    } else {
+    if (!isEmailConfigured()) {
       console.warn(
         "[forgot-password] Email no configurado — token creado pero sin envío"
       );
+      return NextResponse.json(generic);
+    }
+
+    const resetUrl = `${getBaseUrl()}/login/restablecer-contrasena?token=${encodeURIComponent(rawToken)}`;
+    const dedupeKey = `pwreset:${tokenHash}`;
+    const sent = await notifyPasswordResetRequest(
+      user.email,
+      user.name,
+      resetUrl,
+      dedupeKey
+    );
+    if (!sent.ok) {
+      console.error("[forgot-password] envío falló:", sent.error);
     }
 
     return NextResponse.json(generic);
-  } catch {
+  } catch (e) {
+    console.error("[forgot-password]", e);
     return NextResponse.json(generic);
   }
 }

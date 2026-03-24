@@ -5,7 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { normalizeEmail } from "@/lib/sanitize";
 
 export const authOptions: NextAuthOptions = {
-  useSecureCookies: process.env.NODE_ENV === "production",
+  // ⚠️ IMPORTANTE: desactivar secure cookies porque estás en HTTP
+  useSecureCookies: false,
+
   providers: [
     CredentialsProvider({
       name: "credentials",
@@ -27,7 +29,7 @@ export const authOptions: NextAuthOptions = {
 
         const isValid = await bcrypt.compare(
           credentials.password,
-          user.hashedPassword
+          user.hashedPassword,
         );
 
         if (!isValid) return null;
@@ -41,6 +43,7 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
+
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
@@ -57,11 +60,27 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
+
   pages: {
     signIn: "/login",
   },
+
   session: {
     strategy: "jwt",
   },
+
   secret: process.env.NEXTAUTH_SECRET,
+
+  // 🔥 FORZAR CONFIG DE COOKIES (CLAVE)
+  cookies: {
+    sessionToken: {
+      name: "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: false, // ⚠️ porque estás en HTTP
+      },
+    },
+  },
 };

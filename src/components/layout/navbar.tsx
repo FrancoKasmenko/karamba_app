@@ -5,7 +5,8 @@ import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FiShoppingBag,
@@ -18,6 +19,7 @@ import {
   FiRadio,
   FiBookOpen,
   FiPlayCircle,
+  FiCpu,
 } from "react-icons/fi";
 import { useCartStore } from "@/store/cart";
 
@@ -63,6 +65,8 @@ function LiveBadge() {
 export default function Navbar() {
   const { data: session } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
+  const isDigital = pathname === "/soluciones-digitales";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -151,14 +155,23 @@ export default function Navbar() {
     setMobileCatOpen(false);
   };
 
-  const scrollHide =
-    "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden";
-
   return (
     <>
-      <div className="sticky top-0 z-50 mx-2 sm:mx-4 lg:mx-8 mt-2 flex flex-col rounded-2xl border border-primary-light/40 bg-white/95 shadow-sm backdrop-blur-md overflow-visible">
+      <div
+        className={cn(
+          "sticky top-0 z-50 mx-2 sm:mx-4 lg:mx-8 mt-2 flex flex-col rounded-2xl backdrop-blur-md overflow-visible",
+          isDigital
+            ? "border border-white/10 bg-zinc-950/92 shadow-[0_12px_48px_-16px_rgba(0,0,0,0.65),0_0_0_1px_rgba(52,211,153,0.06)_inset]"
+            : "border border-primary-light/40 bg-white/95 shadow-sm"
+        )}
+      >
         {/* —— Navbar principal —— */}
-        <header className="border-b border-primary-light/25">
+        <header
+          className={cn(
+            "border-b",
+            isDigital ? "border-white/10" : "border-primary-light/25"
+          )}
+        >
           <div className="mx-auto max-w-7xl px-3 sm:px-5 lg:px-8">
             <div className="flex h-14 sm:h-[3.25rem] items-center justify-between gap-2">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
@@ -168,7 +181,10 @@ export default function Navbar() {
                     alt="Karamba"
                     width={140}
                     height={45}
-                    className="h-[30px] sm:h-[38px] w-auto object-contain"
+                    className={cn(
+                      "h-[30px] sm:h-[38px] w-auto object-contain",
+                      isDigital && "drop-shadow-[0_0_12px_rgba(52,211,153,0.15)]"
+                    )}
                     priority
                   />
                 </Link>
@@ -181,25 +197,43 @@ export default function Navbar() {
 
               {/* Desktop: navegación principal (sin categorías) */}
               <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center flex-wrap">
-                <MainNavLink href="/">Inicio</MainNavLink>
-                <MainNavLink href="/productos">Productos</MainNavLink>
-                <MainNavLink href="/productos?nuevos=1">Nuevos</MainNavLink>
-                <MainNavLink href="/cursos">
+                <MainNavLink href="/" isDigital={isDigital}>
+                  Inicio
+                </MainNavLink>
+                <MainNavLink href="/productos" isDigital={isDigital}>
+                  Productos
+                </MainNavLink>
+                <MainNavLink
+                  href="/soluciones-digitales"
+                  isDigital={isDigital}
+                  emphasized={isDigital}
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <FiCpu size={14} className="opacity-80" />
+                    Soluciones digitales
+                  </span>
+                </MainNavLink>
+                <MainNavLink href="/productos?nuevos=1" isDigital={isDigital}>
+                  Nuevos
+                </MainNavLink>
+                <MainNavLink href="/cursos" isDigital={isDigital}>
                   <span className="inline-flex items-center gap-1.5">
                     <FiBookOpen size={14} className="opacity-80" />
                     Cursos
                   </span>
                 </MainNavLink>
-                <MainNavLink href="/cursos-online">
+                <MainNavLink href="/cursos-online" isDigital={isDigital}>
                   <span className="inline-flex items-center gap-1.5">
                     <FiPlayCircle size={14} className="opacity-80" />
                     Cursos online
                   </span>
                 </MainNavLink>
                 {session && (
-                  <MainNavLink href="/mi-aprendizaje">Mi aprendizaje</MainNavLink>
+                  <MainNavLink href="/mi-aprendizaje" isDigital={isDigital}>
+                    Mi aprendizaje
+                  </MainNavLink>
                 )}
-                <MainNavLink href="/podcast">
+                <MainNavLink href="/podcast" isDigital={isDigital}>
                   <span className="inline-flex items-center gap-1.5">
                     <FiRadio size={14} className="opacity-80" />
                     Podcast
@@ -220,7 +254,12 @@ export default function Navbar() {
                     setSearchOpen(!searchOpen);
                     setMobileOpen(false);
                   }}
-                  className="p-2 text-warm-gray/80 hover:text-primary transition-colors rounded-lg hover:bg-primary-light/15"
+                  className={cn(
+                    "p-2 transition-colors rounded-lg",
+                    isDigital
+                      ? "text-zinc-400 hover:text-emerald-400 hover:bg-white/10"
+                      : "text-warm-gray/80 hover:text-primary hover:bg-primary-light/15"
+                  )}
                   aria-label="Buscar"
                 >
                   <FiSearch size={18} />
@@ -228,12 +267,24 @@ export default function Navbar() {
 
                 <Link
                   href="/carrito"
-                  className="relative p-2 text-warm-gray/80 hover:text-primary transition-colors rounded-lg hover:bg-primary-light/15"
+                  className={cn(
+                    "relative p-2 transition-colors rounded-lg",
+                    isDigital
+                      ? "text-zinc-400 hover:text-emerald-400 hover:bg-white/10"
+                      : "text-warm-gray/80 hover:text-primary hover:bg-primary-light/15"
+                  )}
                   aria-label="Carrito"
                 >
                   <FiShoppingBag size={18} />
                   {itemCount > 0 && (
-                    <span className="absolute -top-0.5 -right-0.5 bg-primary text-white text-[10px] w-[17px] h-[17px] rounded-full flex items-center justify-center font-bold">
+                    <span
+                      className={cn(
+                        "absolute -top-0.5 -right-0.5 text-white text-[10px] w-[17px] h-[17px] rounded-full flex items-center justify-center font-bold",
+                        isDigital
+                          ? "bg-gradient-to-br from-emerald-500 to-cyan-500"
+                          : "bg-primary"
+                      )}
+                    >
                       {itemCount}
                     </span>
                   )}
@@ -244,14 +295,24 @@ export default function Navbar() {
                     {session.user.role === "ADMIN" && (
                       <Link
                         href="/admin"
-                        className="text-[11px] font-semibold text-secondary-dark bg-secondary-light/50 px-2.5 py-1.5 rounded-full hover:bg-secondary-light/70 transition-colors"
+                        className={cn(
+                          "text-[11px] font-semibold px-2.5 py-1.5 rounded-full transition-colors",
+                          isDigital
+                            ? "text-cyan-200 bg-cyan-500/15 hover:bg-cyan-500/25"
+                            : "text-secondary-dark bg-secondary-light/50 hover:bg-secondary-light/70"
+                        )}
                       >
                         Admin
                       </Link>
                     )}
                     <Link
                       href="/perfil"
-                      className="p-2 text-warm-gray/80 hover:text-primary rounded-lg hover:bg-primary-light/15 transition-colors"
+                      className={cn(
+                        "p-2 rounded-lg transition-colors",
+                        isDigital
+                          ? "text-zinc-400 hover:text-emerald-400 hover:bg-white/10"
+                          : "text-warm-gray/80 hover:text-primary hover:bg-primary-light/15"
+                      )}
                       aria-label="Mi cuenta"
                     >
                       <FiUser size={18} />
@@ -259,7 +320,12 @@ export default function Navbar() {
                     <button
                       type="button"
                       onClick={() => signOut()}
-                      className="text-[11px] text-gray-400 hover:text-primary px-2 py-1.5 transition-colors"
+                      className={cn(
+                        "text-[11px] px-2 py-1.5 transition-colors",
+                        isDigital
+                          ? "text-zinc-500 hover:text-emerald-400"
+                          : "text-gray-400 hover:text-primary"
+                      )}
                     >
                       Salir
                     </button>
@@ -267,7 +333,12 @@ export default function Navbar() {
                 ) : (
                   <Link
                     href="/login"
-                    className="hidden lg:inline-flex text-[13px] font-semibold bg-primary text-white px-4 py-2 rounded-full hover:bg-primary-dark transition-all"
+                    className={cn(
+                      "hidden lg:inline-flex text-[13px] font-semibold px-4 py-2 rounded-full transition-all",
+                      isDigital
+                        ? "bg-gradient-to-r from-emerald-500 to-cyan-500 text-zinc-950 hover:opacity-95 shadow-[0_0_20px_-6px_rgba(52,211,153,0.5)]"
+                        : "bg-primary text-white hover:bg-primary-dark"
+                    )}
                   >
                     Ingresar
                   </Link>
@@ -275,7 +346,12 @@ export default function Navbar() {
 
                 <button
                   type="button"
-                  className="lg:hidden p-2 text-warm-gray hover:text-primary rounded-lg hover:bg-primary-light/15"
+                  className={cn(
+                    "lg:hidden p-2 rounded-lg transition-colors",
+                    isDigital
+                      ? "text-zinc-300 hover:text-emerald-400 hover:bg-white/10"
+                      : "text-warm-gray hover:text-primary hover:bg-primary-light/15"
+                  )}
                   onClick={() => {
                     setMobileOpen(!mobileOpen);
                     setSearchOpen(false);
@@ -294,26 +370,54 @@ export default function Navbar() {
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: "auto", opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden border-t border-primary-light/20 bg-white"
+                className={cn(
+                  "overflow-hidden border-t",
+                  isDigital
+                    ? "border-white/10 bg-zinc-900/95"
+                    : "border-primary-light/20 bg-white"
+                )}
               >
                 <form
                   onSubmit={handleSearch}
                   className="mx-auto max-w-2xl px-4 py-3"
                 >
-                  <div className="flex items-center gap-3 bg-soft-gray rounded-full px-4 py-2">
-                    <FiSearch size={18} className="text-gray-400 shrink-0" />
+                  <div
+                    className={cn(
+                      "flex items-center gap-3 rounded-full px-4 py-2",
+                      isDigital
+                        ? "bg-zinc-800/80 ring-1 ring-white/10"
+                        : "bg-soft-gray"
+                    )}
+                  >
+                    <FiSearch
+                      size={18}
+                      className={cn(
+                        "shrink-0",
+                        isDigital ? "text-zinc-500" : "text-gray-400"
+                      )}
+                    />
                     <input
                       ref={searchRef}
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       placeholder="Buscar productos..."
-                      className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 min-w-0"
+                      className={cn(
+                        "flex-1 bg-transparent text-sm outline-none min-w-0",
+                        isDigital
+                          ? "text-zinc-100 placeholder:text-zinc-500"
+                          : "placeholder:text-gray-400"
+                      )}
                     />
                     <button
                       type="button"
                       onClick={() => setSearchOpen(false)}
-                      className="text-gray-400 hover:text-gray-600 shrink-0 p-1"
+                      className={cn(
+                        "shrink-0 p-1",
+                        isDigital
+                          ? "text-zinc-500 hover:text-zinc-300"
+                          : "text-gray-400 hover:text-gray-600"
+                      )}
                     >
                       <FiX size={16} />
                     </button>
@@ -325,30 +429,48 @@ export default function Navbar() {
         </header>
 
         {/* —— Barra de categorías (dinámica) —— */}
-        <div className="bg-gradient-to-r from-primary-light/95 via-primary-light/85 to-secondary-light/70 border-t border-white/30 rounded-b-2xl overflow-visible">
+        <div
+          className={cn(
+            "border-t rounded-b-2xl overflow-visible",
+            isDigital
+              ? "bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-white/10"
+              : "bg-gradient-to-r from-primary-light/95 via-primary-light/85 to-secondary-light/70 border-white/30"
+          )}
+        >
           <div className="mx-auto max-w-7xl overflow-visible">
-            {/* Desktop + tablet: hover dropdowns — sin overflow-x-auto en el padre: recorta el eje Y y oculta el menú */}
-            <div
-              className={`hidden md:flex items-stretch overflow-x-auto ${scrollHide} px-2 sm:px-4`}
-            >
+            {/* Desktop + tablet: varias filas centradas si no caben en una línea */}
+            <div className="hidden md:flex flex-wrap justify-center items-stretch px-2 sm:px-4 py-1 gap-y-0">
               <Link
                 href="/productos"
-                className="shrink-0 px-4 py-3 text-[11px] sm:text-xs font-bold tracking-[0.12em] text-warm-gray/90 uppercase hover:bg-white/25 transition-colors border-r border-white/20"
+                className={cn(
+                  "shrink-0 px-4 py-3 text-[11px] sm:text-xs font-bold tracking-[0.12em] uppercase transition-colors border-r",
+                  isDigital
+                    ? "text-zinc-300 border-white/10 hover:bg-white/10"
+                    : "text-warm-gray/90 border-white/20 hover:bg-white/25"
+                )}
               >
                 Todos
               </Link>
               {categories.map((cat) => (
                 <div
                   key={cat.id}
-                  className="relative shrink-0 border-r border-white/20 last:border-r-0"
+                  className={cn(
+                    "relative shrink-0 border-r last:border-r-0",
+                    isDigital ? "border-white/10" : "border-white/20"
+                  )}
                   onMouseEnter={(e) => handleCatEnter(cat, e.currentTarget)}
                   onMouseLeave={handleCatLeave}
                 >
                   <Link
                     href={`/productos?categoria=${cat.slug}`}
-                    className={`flex items-center gap-1 px-4 py-3 text-[11px] sm:text-xs font-bold tracking-[0.12em] text-warm-gray uppercase hover:bg-white/25 transition-colors h-full ${
-                      openMenu?.catId === cat.id ? "bg-white/20" : ""
-                    }`}
+                    className={cn(
+                      "flex items-center gap-1 px-4 py-3 text-[11px] sm:text-xs font-bold tracking-[0.12em] uppercase transition-colors h-full",
+                      isDigital
+                        ? "text-zinc-200 hover:bg-white/10"
+                        : "text-warm-gray hover:bg-white/25",
+                      openMenu?.catId === cat.id &&
+                        (isDigital ? "bg-white/10" : "bg-white/20")
+                    )}
                   >
                     {cat.name}
                     {cat.children.length > 0 && (
@@ -362,13 +484,16 @@ export default function Navbar() {
               ))}
             </div>
 
-            {/* Mobile: scroll horizontal */}
-            <div
-              className={`flex md:hidden items-stretch overflow-x-auto ${scrollHide} px-2`}
-            >
+            {/* Mobile: mismas filas centradas (sin recorte lateral) */}
+            <div className="flex md:hidden flex-wrap justify-center items-stretch px-2 py-1 gap-y-0">
               <Link
                 href="/productos"
-                className="shrink-0 px-3 py-2.5 text-[10px] font-bold tracking-[0.1em] text-warm-gray/90 uppercase whitespace-nowrap"
+                className={cn(
+                  "shrink-0 px-3 py-2.5 text-[10px] font-bold tracking-[0.1em] uppercase whitespace-nowrap border-r last:border-r-0",
+                  isDigital
+                    ? "text-zinc-300 border-white/10"
+                    : "text-warm-gray/90 border-white/25"
+                )}
               >
                 Todos
               </Link>
@@ -376,7 +501,12 @@ export default function Navbar() {
                 <Link
                   key={cat.id}
                   href={`/productos?categoria=${cat.slug}`}
-                  className="shrink-0 px-3 py-2.5 text-[10px] font-bold tracking-[0.1em] text-warm-gray uppercase whitespace-nowrap border-l border-white/25"
+                  className={cn(
+                    "shrink-0 px-3 py-2.5 text-[10px] font-bold tracking-[0.1em] uppercase whitespace-nowrap border-r last:border-r-0",
+                    isDigital
+                      ? "text-zinc-200 border-white/10"
+                      : "text-warm-gray border-white/25"
+                  )}
                 >
                   {cat.name}
                 </Link>
@@ -391,7 +521,12 @@ export default function Navbar() {
         createPortal(
           <div
             role="menu"
-            className="fixed z-[100] min-w-[200px] bg-white rounded-b-xl shadow-xl border border-primary-light/30 py-1.5 pt-2 -mt-1"
+            className={cn(
+              "fixed z-[100] min-w-[200px] rounded-b-xl shadow-xl py-1.5 pt-2 -mt-1 border",
+              isDigital
+                ? "bg-zinc-900 border-white/15 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.6)]"
+                : "bg-white border-primary-light/30"
+            )}
             style={{ top: openMenu.top, left: openMenu.left }}
             onMouseEnter={cancelMenuClose}
             onMouseLeave={handleCatLeave}
@@ -400,7 +535,12 @@ export default function Navbar() {
               <Link
                 key={sub.id}
                 href={`/productos?categoria=${sub.slug}`}
-                className="block px-4 py-2.5 text-sm font-medium text-warm-gray hover:bg-primary-light/15 hover:text-primary transition-colors"
+                className={cn(
+                  "block px-4 py-2.5 text-sm font-medium transition-colors",
+                  isDigital
+                    ? "text-zinc-200 hover:bg-emerald-500/15 hover:text-emerald-300"
+                    : "text-warm-gray hover:bg-primary-light/15 hover:text-primary"
+                )}
               >
                 {sub.name}
               </Link>
@@ -425,64 +565,123 @@ export default function Navbar() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed top-0 right-0 bottom-0 w-[min(100vw-3rem,320px)] bg-white z-[70] lg:hidden shadow-2xl flex flex-col"
+              className={cn(
+                "fixed top-0 right-0 bottom-0 w-[min(100vw-3rem,320px)] z-[70] lg:hidden shadow-2xl flex flex-col border-l",
+                isDigital
+                  ? "bg-zinc-950 border-white/10"
+                  : "bg-white border-transparent"
+              )}
             >
-              <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <div
+                className={cn(
+                  "flex items-center justify-between p-4 border-b",
+                  isDigital ? "border-white/10" : "border-gray-100"
+                )}
+              >
                 <Image
                   src="/img/karamba.png"
                   alt="Karamba"
                   width={100}
                   height={32}
-                  className="h-[28px] w-auto object-contain"
+                  className={cn(
+                    "h-[28px] w-auto object-contain",
+                    isDigital && "drop-shadow-[0_0_10px_rgba(52,211,153,0.12)]"
+                  )}
                 />
                 <button
                   type="button"
                   onClick={closeMobile}
-                  className="p-2 text-gray-400 hover:text-warm-gray rounded-lg hover:bg-gray-50"
+                  className={cn(
+                    "p-2 rounded-lg transition-colors",
+                    isDigital
+                      ? "text-zinc-500 hover:text-emerald-400 hover:bg-white/10"
+                      : "text-gray-400 hover:text-warm-gray hover:bg-gray-50"
+                  )}
                 >
                   <FiX size={20} />
                 </button>
               </div>
 
-              <form onSubmit={handleSearch} className="px-4 py-3 border-b border-gray-100">
-                <div className="flex items-center gap-2 bg-soft-gray rounded-xl px-3 py-2.5">
-                  <FiSearch size={16} className="text-gray-400 shrink-0" />
+              <form
+                onSubmit={handleSearch}
+                className={cn(
+                  "px-4 py-3 border-b",
+                  isDigital ? "border-white/10" : "border-gray-100"
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl px-3 py-2.5",
+                    isDigital
+                      ? "bg-zinc-900 ring-1 ring-white/10"
+                      : "bg-soft-gray"
+                  )}
+                >
+                  <FiSearch
+                    size={16}
+                    className={cn(
+                      "shrink-0",
+                      isDigital ? "text-zinc-500" : "text-gray-400"
+                    )}
+                  />
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Buscar..."
-                    className="flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400 min-w-0"
+                    className={cn(
+                      "flex-1 bg-transparent text-sm outline-none min-w-0",
+                      isDigital
+                        ? "text-zinc-100 placeholder:text-zinc-500"
+                        : "placeholder:text-gray-400"
+                    )}
                   />
                 </div>
               </form>
 
               <div className="flex-1 overflow-y-auto py-2">
                 <nav className="px-2 space-y-0.5">
-                  <MobileLink href="/" label="Inicio" onClick={closeMobile} />
-                  <MobileLink href="/productos" label="Productos" onClick={closeMobile} />
+                  <MobileLink href="/" label="Inicio" onClick={closeMobile} isDigital={isDigital} />
+                  <MobileLink
+                    href="/productos"
+                    label="Productos"
+                    onClick={closeMobile}
+                    isDigital={isDigital}
+                  />
+                  <MobileLink
+                    href="/soluciones-digitales"
+                    label="Soluciones digitales"
+                    icon={<FiCpu size={15} />}
+                    onClick={closeMobile}
+                    isDigital={isDigital}
+                    emphasized={isDigital}
+                  />
                   <MobileLink
                     href="/productos?nuevos=1"
                     label="Nuevos"
                     onClick={closeMobile}
+                    isDigital={isDigital}
                   />
                   <MobileLink
                     href="/cursos"
                     label="Cursos"
                     icon={<FiBookOpen size={15} />}
                     onClick={closeMobile}
+                    isDigital={isDigital}
                   />
                   <MobileLink
                     href="/cursos-online"
                     label="Cursos online"
                     icon={<FiPlayCircle size={15} />}
                     onClick={closeMobile}
+                    isDigital={isDigital}
                   />
                   {session && (
                     <MobileLink
                       href="/mi-aprendizaje"
                       label="Mi aprendizaje"
                       onClick={closeMobile}
+                      isDigital={isDigital}
                     />
                   )}
                   <MobileLink
@@ -490,17 +689,27 @@ export default function Navbar() {
                     label="Podcast"
                     icon={<FiRadio size={15} />}
                     onClick={closeMobile}
+                    isDigital={isDigital}
                   />
 
                   <button
                     type="button"
                     onClick={() => setMobileCatOpen(!mobileCatOpen)}
-                    className="w-full flex items-center justify-between px-3 py-3 text-sm font-medium text-warm-gray hover:bg-primary-light/10 rounded-xl transition-colors"
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-3 text-sm font-medium rounded-xl transition-colors",
+                      isDigital
+                        ? "text-zinc-200 hover:bg-white/10"
+                        : "text-warm-gray hover:bg-primary-light/10"
+                    )}
                   >
                     Categorías
                     <FiChevronDown
                       size={14}
-                      className={`text-gray-400 transition-transform ${mobileCatOpen ? "rotate-180" : ""}`}
+                      className={cn(
+                        "transition-transform",
+                        mobileCatOpen ? "rotate-180" : "",
+                        isDigital ? "text-zinc-500" : "text-gray-400"
+                      )}
                     />
                   </button>
                   <AnimatePresence>
@@ -514,7 +723,12 @@ export default function Navbar() {
                         <Link
                           href="/productos"
                           onClick={closeMobile}
-                          className="block pl-6 pr-3 py-2 text-sm font-semibold text-primary-dark hover:bg-primary-light/10 rounded-xl"
+                          className={cn(
+                            "block pl-6 pr-3 py-2 text-sm font-semibold rounded-xl",
+                            isDigital
+                              ? "text-emerald-400 hover:bg-white/10"
+                              : "text-primary-dark hover:bg-primary-light/10"
+                          )}
                         >
                           Ver todos los productos
                         </Link>
@@ -523,9 +737,17 @@ export default function Navbar() {
                             <Link
                               href={`/productos?categoria=${cat.slug}`}
                               onClick={closeMobile}
-                              className="flex items-center gap-2 pl-6 pr-3 py-2 text-sm text-gray-600 hover:bg-primary-light/10 rounded-xl"
+                              className={cn(
+                                "flex items-center gap-2 pl-6 pr-3 py-2 text-sm rounded-xl",
+                                isDigital
+                                  ? "text-zinc-300 hover:bg-white/10"
+                                  : "text-gray-600 hover:bg-primary-light/10"
+                              )}
                             >
-                              <FiChevronRight size={12} className="text-gray-400" />
+                              <FiChevronRight
+                                size={12}
+                                className={isDigital ? "text-zinc-500" : "text-gray-400"}
+                              />
                               {cat.name}
                             </Link>
                             {cat.children.map((sub) => (
@@ -533,7 +755,12 @@ export default function Navbar() {
                                 key={sub.id}
                                 href={`/productos?categoria=${sub.slug}`}
                                 onClick={closeMobile}
-                                className="block pl-10 pr-3 py-1.5 text-xs text-gray-400 hover:text-primary"
+                                className={cn(
+                                  "block pl-10 pr-3 py-1.5 text-xs",
+                                  isDigital
+                                    ? "text-zinc-500 hover:text-emerald-400"
+                                    : "text-gray-400 hover:text-primary"
+                                )}
                               >
                                 {sub.name}
                               </Link>
@@ -547,12 +774,21 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={() => setMobileMoreOpen(!mobileMoreOpen)}
-                    className="w-full flex items-center justify-between px-3 py-3 text-sm font-medium text-warm-gray hover:bg-primary-light/10 rounded-xl transition-colors"
+                    className={cn(
+                      "w-full flex items-center justify-between px-3 py-3 text-sm font-medium rounded-xl transition-colors",
+                      isDigital
+                        ? "text-zinc-200 hover:bg-white/10"
+                        : "text-warm-gray hover:bg-primary-light/10"
+                    )}
                   >
                     Más
                     <FiChevronDown
                       size={14}
-                      className={`text-gray-400 transition-transform ${mobileMoreOpen ? "rotate-180" : ""}`}
+                      className={cn(
+                        "transition-transform",
+                        mobileMoreOpen ? "rotate-180" : "",
+                        isDigital ? "text-zinc-500" : "text-gray-400"
+                      )}
                     />
                   </button>
                   <AnimatePresence>
@@ -563,40 +799,105 @@ export default function Navbar() {
                         exit={{ height: 0, opacity: 0 }}
                         className="overflow-hidden space-y-0.5"
                       >
-                        <MobileLink href="/nosotros" label="Nosotros" onClick={closeMobile} />
-                        <MobileLink href="/contacto" label="Contacto" onClick={closeMobile} />
+                        <MobileLink
+                          href="/nosotros"
+                          label="Nosotros"
+                          onClick={closeMobile}
+                          isDigital={isDigital}
+                        />
+                        <MobileLink
+                          href="/contacto"
+                          label="Contacto"
+                          onClick={closeMobile}
+                          isDigital={isDigital}
+                        />
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </nav>
 
-                <hr className="my-3 mx-4 border-gray-100" />
+                <hr
+                  className={cn(
+                    "my-3 mx-4",
+                    isDigital ? "border-white/10" : "border-gray-100"
+                  )}
+                />
                 <nav className="px-2 space-y-0.5">
-                  <MobileLink href="/faq" label="Preguntas frecuentes" onClick={closeMobile} small />
-                  <MobileLink href="/politicas-envio" label="Política de envíos" onClick={closeMobile} small />
-                  <MobileLink href="/politicas-cambio" label="Política de cambios" onClick={closeMobile} small />
+                  <MobileLink
+                    href="/faq"
+                    label="Preguntas frecuentes"
+                    onClick={closeMobile}
+                    small
+                    isDigital={isDigital}
+                  />
+                  <MobileLink
+                    href="/politicas-envio"
+                    label="Política de envíos"
+                    onClick={closeMobile}
+                    small
+                    isDigital={isDigital}
+                  />
+                  <MobileLink
+                    href="/politicas-cambio"
+                    label="Política de cambios"
+                    onClick={closeMobile}
+                    small
+                    isDigital={isDigital}
+                  />
                 </nav>
               </div>
 
-              <div className="p-4 border-t border-gray-100 space-y-2">
+              <div
+                className={cn(
+                  "p-4 border-t space-y-2",
+                  isDigital ? "border-white/10" : "border-gray-100"
+                )}
+              >
                 {session ? (
                   <>
                     <div className="flex items-center gap-3 px-1 mb-2">
-                      <div className="w-8 h-8 bg-primary-light/30 rounded-full flex items-center justify-center">
-                        <FiUser size={14} className="text-primary-dark" />
+                      <div
+                        className={cn(
+                          "w-8 h-8 rounded-full flex items-center justify-center",
+                          isDigital
+                            ? "bg-emerald-500/15"
+                            : "bg-primary-light/30"
+                        )}
+                      >
+                        <FiUser
+                          size={14}
+                          className={isDigital ? "text-emerald-400" : "text-primary-dark"}
+                        />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-warm-gray truncate">
+                        <p
+                          className={cn(
+                            "text-sm font-medium truncate",
+                            isDigital ? "text-zinc-200" : "text-warm-gray"
+                          )}
+                        >
                           {session.user.name || session.user.email}
                         </p>
-                        <p className="text-[10px] text-gray-400 truncate">{session.user.email}</p>
+                        <p
+                          className={cn(
+                            "text-[10px] truncate",
+                            isDigital ? "text-zinc-500" : "text-gray-400"
+                          )}
+                        >
+                          {session.user.email}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Link
                         href="/perfil"
                         onClick={closeMobile}
-                        className="flex-1 text-center text-sm font-medium text-warm-gray bg-soft-gray py-2.5 rounded-xl hover:bg-gray-200 transition-colors"
+                        className={cn(
+                          "flex-1 text-center text-sm font-medium py-2.5 rounded-xl transition-colors",
+                          isDigital
+                            ? "text-zinc-200 bg-zinc-800/80 hover:bg-zinc-800"
+                            : "text-warm-gray bg-soft-gray hover:bg-gray-200"
+                        )}
                       >
                         Mi cuenta
                       </Link>
@@ -604,7 +905,12 @@ export default function Navbar() {
                         <Link
                           href="/admin"
                           onClick={closeMobile}
-                          className="flex-1 text-center text-sm font-semibold text-secondary-dark bg-secondary-light/40 py-2.5 rounded-xl"
+                          className={cn(
+                            "flex-1 text-center text-sm font-semibold py-2.5 rounded-xl",
+                            isDigital
+                              ? "text-cyan-200 bg-cyan-500/15"
+                              : "text-secondary-dark bg-secondary-light/40"
+                          )}
                         >
                           Admin
                         </Link>
@@ -616,7 +922,12 @@ export default function Navbar() {
                         signOut();
                         closeMobile();
                       }}
-                      className="w-full text-center text-sm text-gray-400 hover:text-primary py-2"
+                      className={cn(
+                        "w-full text-center text-sm py-2 transition-colors",
+                        isDigital
+                          ? "text-zinc-500 hover:text-emerald-400"
+                          : "text-gray-400 hover:text-primary"
+                      )}
                     >
                       Cerrar sesión
                     </button>
@@ -625,7 +936,12 @@ export default function Navbar() {
                   <Link
                     href="/login"
                     onClick={closeMobile}
-                    className="block text-center text-sm font-semibold bg-primary text-white py-3 rounded-xl hover:bg-primary-dark transition-all"
+                    className={cn(
+                      "block text-center text-sm font-semibold py-3 rounded-xl transition-all",
+                      isDigital
+                        ? "bg-gradient-to-r from-emerald-500 to-cyan-500 text-zinc-950 hover:opacity-95"
+                        : "bg-primary text-white hover:bg-primary-dark"
+                    )}
                   >
                     Ingresar
                   </Link>
@@ -639,11 +955,28 @@ export default function Navbar() {
   );
 }
 
-function MainNavLink({ href, children }: { href: string; children: React.ReactNode }) {
+function MainNavLink({
+  href,
+  children,
+  isDigital,
+  emphasized,
+}: {
+  href: string;
+  children: React.ReactNode;
+  isDigital?: boolean;
+  emphasized?: boolean;
+}) {
   return (
     <Link
       href={href}
-      className="text-[13px] font-medium text-warm-gray/85 hover:text-primary px-3 py-2 rounded-lg transition-colors"
+      className={cn(
+        "text-[13px] font-medium px-3 py-2 rounded-lg transition-colors",
+        isDigital
+          ? emphasized
+            ? "text-emerald-400 bg-emerald-500/10 ring-1 ring-emerald-500/20 hover:bg-emerald-500/15"
+            : "text-zinc-300 hover:text-emerald-400 hover:bg-white/5"
+          : "text-warm-gray/85 hover:text-primary"
+      )}
     >
       {children}
     </Link>
@@ -656,22 +989,33 @@ function MobileLink({
   icon,
   onClick,
   small,
+  isDigital,
+  emphasized,
 }: {
   href: string;
   label: string;
   icon?: React.ReactNode;
   onClick: () => void;
   small?: boolean;
+  isDigital?: boolean;
+  emphasized?: boolean;
 }) {
   return (
     <Link
       href={href}
       onClick={onClick}
-      className={`flex items-center gap-2.5 px-3 rounded-xl transition-colors ${
+      className={cn(
+        "flex items-center gap-2.5 px-3 rounded-xl transition-colors",
         small
-          ? "py-2 text-xs text-gray-400 hover:text-gray-600"
-          : "py-3 text-sm font-medium text-warm-gray hover:bg-primary-light/10"
-      }`}
+          ? isDigital
+            ? "py-2 text-xs text-zinc-500 hover:text-emerald-400"
+            : "py-2 text-xs text-gray-400 hover:text-gray-600"
+          : isDigital
+            ? emphasized
+              ? "py-3 text-sm font-medium text-emerald-400 bg-emerald-500/10 ring-1 ring-emerald-500/20"
+              : "py-3 text-sm font-medium text-zinc-200 hover:bg-white/10"
+            : "py-3 text-sm font-medium text-warm-gray hover:bg-primary-light/10"
+      )}
     >
       {icon}
       {label}

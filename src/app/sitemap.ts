@@ -12,6 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "/cursos", priority: 0.85 },
     { path: "/cursos-online", priority: 0.85 },
     { path: "/contacto", priority: 0.6 },
+    { path: "/soluciones-digitales", priority: 0.65 },
     { path: "/nosotros", priority: 0.6 },
     { path: "/faq", priority: 0.5 },
     { path: "/podcast", priority: 0.6 },

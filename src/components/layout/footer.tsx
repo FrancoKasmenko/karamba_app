@@ -1,11 +1,25 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { FiInstagram, FiMail, FiPhone, FiMapPin } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
+import { cn } from "@/lib/utils";
 
 export default function Footer() {
+  const pathname = usePathname();
+  const isDigital = pathname === "/soluciones-digitales";
+
   return (
-    <footer className="bg-white border-t border-primary-light/40 mt-16">
+    <footer
+      className={cn(
+        "border-t",
+        isDigital
+          ? "mt-0 bg-zinc-950 border-white/10 text-zinc-300 pt-16"
+          : "mt-16 bg-white border-primary-light/40"
+      )}
+    >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-14">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           {/* Brand */}
@@ -15,9 +29,17 @@ export default function Footer() {
               alt="Karamba"
               width={140}
               height={45}
-              className="h-[40px] w-auto object-contain"
+              className={cn(
+                "h-[40px] w-auto object-contain",
+                isDigital && "drop-shadow-[0_0_14px_rgba(52,211,153,0.12)]"
+              )}
             />
-            <p className="mt-3 text-sm text-gray-500 leading-relaxed">
+            <p
+              className={cn(
+                "mt-3 text-sm leading-relaxed",
+                isDigital ? "text-zinc-500" : "text-gray-500"
+              )}
+            >
               Productos artesanales hechos con amor y dedicaci&oacute;n.
               Cada pieza es &uacute;nica, creada especialmente para vos.
             </p>
@@ -26,7 +48,12 @@ export default function Footer() {
                 href="https://www.instagram.com/karamba.uy/"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-primary-light/40 flex items-center justify-center text-primary-dark hover:bg-primary hover:text-white transition-all"
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center transition-all",
+                  isDigital
+                    ? "bg-white/10 text-zinc-200 hover:bg-gradient-to-br hover:from-emerald-500 hover:to-cyan-500 hover:text-zinc-950"
+                    : "bg-primary-light/40 text-primary-dark hover:bg-primary hover:text-white"
+                )}
               >
                 <FiInstagram size={16} />
               </a>
@@ -34,7 +61,12 @@ export default function Footer() {
                 href="https://wa.me/59897629629"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-full bg-mint/60 flex items-center justify-center text-green-700 hover:bg-green-500 hover:text-white transition-all"
+                className={cn(
+                  "w-9 h-9 rounded-full flex items-center justify-center transition-all",
+                  isDigital
+                    ? "bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500 hover:text-zinc-950"
+                    : "bg-mint/60 text-green-700 hover:bg-green-500 hover:text-white"
+                )}
               >
                 <FaWhatsapp size={16} />
               </a>
@@ -43,13 +75,19 @@ export default function Footer() {
 
           {/* Navigation */}
           <div>
-            <h4 className="text-sm font-bold text-warm-gray mb-4 uppercase tracking-wider">
+            <h4
+              className={cn(
+                "text-sm font-bold mb-4 uppercase tracking-wider",
+                isDigital ? "text-zinc-200" : "text-warm-gray"
+              )}
+            >
               Navegaci&oacute;n
             </h4>
             <ul className="space-y-2.5">
               {[
                 { href: "/", label: "Inicio" },
                 { href: "/productos", label: "Productos" },
+                { href: "/soluciones-digitales", label: "Soluciones digitales" },
                 { href: "/cursos", label: "Cursos" },
                 { href: "/nosotros", label: "Nosotros" },
                 { href: "/podcast", label: "Podcast" },
@@ -59,7 +97,14 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-gray-500 hover:text-secondary-dark transition-colors"
+                    className={cn(
+                      "text-sm transition-colors",
+                      isDigital
+                        ? link.href === "/soluciones-digitales"
+                          ? "text-emerald-400 hover:text-emerald-300"
+                          : "text-zinc-500 hover:text-cyan-400"
+                        : "text-gray-500 hover:text-secondary-dark"
+                    )}
                   >
                     {link.label}
                   </Link>
@@ -70,7 +115,12 @@ export default function Footer() {
 
           {/* Policies */}
           <div>
-            <h4 className="text-sm font-bold text-warm-gray mb-4 uppercase tracking-wider">
+            <h4
+              className={cn(
+                "text-sm font-bold mb-4 uppercase tracking-wider",
+                isDigital ? "text-zinc-200" : "text-warm-gray"
+              )}
+            >
               Pol&iacute;ticas
             </h4>
             <ul className="space-y-2.5">
@@ -82,7 +132,12 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-gray-500 hover:text-accent-dark transition-colors"
+                    className={cn(
+                      "text-sm transition-colors",
+                      isDigital
+                        ? "text-zinc-500 hover:text-cyan-400"
+                        : "text-gray-500 hover:text-accent-dark"
+                    )}
                   >
                     {link.label}
                   </Link>
@@ -93,45 +148,104 @@ export default function Footer() {
 
           {/* Contact */}
           <div>
-            <h4 className="text-sm font-bold text-warm-gray mb-4 uppercase tracking-wider">
+            <h4
+              className={cn(
+                "text-sm font-bold mb-4 uppercase tracking-wider",
+                isDigital ? "text-zinc-200" : "text-warm-gray"
+              )}
+            >
               Contacto
             </h4>
             <div className="space-y-3">
               <div className="flex items-start gap-2.5">
-                <FiMapPin size={15} className="text-secondary-dark mt-0.5 shrink-0" />
-                <span className="text-sm text-gray-500">
+                <FiMapPin
+                  size={15}
+                  className={cn(
+                    "mt-0.5 shrink-0",
+                    isDigital ? "text-cyan-400/80" : "text-secondary-dark"
+                  )}
+                />
+                <span
+                  className={cn(
+                    "text-sm",
+                    isDigital ? "text-zinc-500" : "text-gray-500"
+                  )}
+                >
                   Solferino 4041, Montevideo, Uruguay
                 </span>
               </div>
               <a
                 href="tel:25099128"
-                className="flex items-center gap-2.5 text-sm text-gray-500 hover:text-accent-dark transition-colors"
+                className={cn(
+                  "flex items-center gap-2.5 text-sm transition-colors",
+                  isDigital
+                    ? "text-zinc-500 hover:text-emerald-400"
+                    : "text-gray-500 hover:text-accent-dark"
+                )}
               >
-                <FiPhone size={15} className="text-accent-dark shrink-0" />
+                <FiPhone
+                  size={15}
+                  className={cn(
+                    "shrink-0",
+                    isDigital ? "text-emerald-400/90" : "text-accent-dark"
+                  )}
+                />
                 2509 9128
               </a>
               <a
                 href="https://wa.me/59897629629"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2.5 text-sm text-gray-500 hover:text-green-600 transition-colors"
+                className={cn(
+                  "flex items-center gap-2.5 text-sm transition-colors",
+                  isDigital
+                    ? "text-zinc-500 hover:text-emerald-400"
+                    : "text-gray-500 hover:text-green-600"
+                )}
               >
-                <FaWhatsapp size={15} className="text-green-600 shrink-0" />
+                <FaWhatsapp
+                  size={15}
+                  className={cn(
+                    "shrink-0",
+                    isDigital ? "text-emerald-400" : "text-green-600"
+                  )}
+                />
                 097 629 629
               </a>
               <a
                 href="mailto:karamba@vera.com.uy"
-                className="flex items-center gap-2.5 text-sm text-gray-500 hover:text-primary transition-colors"
+                className={cn(
+                  "flex items-center gap-2.5 text-sm transition-colors",
+                  isDigital
+                    ? "text-zinc-500 hover:text-cyan-400"
+                    : "text-gray-500 hover:text-primary"
+                )}
               >
-                <FiMail size={15} className="text-primary shrink-0" />
+                <FiMail
+                  size={15}
+                  className={cn(
+                    "shrink-0",
+                    isDigital ? "text-cyan-400/90" : "text-primary"
+                  )}
+                />
                 karamba@vera.com.uy
               </a>
             </div>
           </div>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-primary-light/30 text-center">
-          <p className="text-xs text-gray-400">
+        <div
+          className={cn(
+            "mt-12 pt-6 border-t text-center",
+            isDigital ? "border-white/10" : "border-primary-light/30"
+          )}
+        >
+          <p
+            className={cn(
+              "text-xs",
+              isDigital ? "text-zinc-600" : "text-gray-400"
+            )}
+          >
             &copy; {new Date().getFullYear()} Karamba. Todos los derechos
             reservados. Hecho con &hearts; en Uruguay.
           </p>

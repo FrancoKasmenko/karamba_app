@@ -53,3 +53,8 @@ body {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* Franja crema del body junto al nav/footer solo en /soluciones-digitales */
+body:has([data-soluciones-digitales]) {
+  background-color: #09090b;
+}

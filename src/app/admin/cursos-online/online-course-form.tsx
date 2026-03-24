@@ -370,7 +370,7 @@ export default function OnlineCourseForm({
                 <input
                   value={form.image}
                   onChange={(e) => setForm({ ...form, image: e.target.value })}
-                  placeholder="/uploads/… o https://…"
+                  placeholder="/api/uploads/… o https://…"
                   className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary outline-none text-sm font-mono text-xs"
                 />
               </div>
@@ -672,7 +672,7 @@ export default function OnlineCourseForm({
               className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm"
             />
             <input
-              placeholder="URL archivo (/uploads/… o externa)"
+              placeholder="URL archivo (/api/uploads/… o externa)"
               value={res.fileUrl}
               onChange={(e) => {
                 const resources = [...form.resources];

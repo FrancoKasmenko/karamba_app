@@ -107,7 +107,7 @@ async function downloadImage(url, uploadDir) {
     const filepath = path.join(uploadDir, filename);
     fs.writeFileSync(filepath, buffer);
 
-    const localPath = `/uploads/products/${filename}`;
+    const localPath = `/api/uploads/products/${filename}`;
     imageCache.set(url, localPath);
     return localPath;
   } catch (err) {

@@ -1,11 +1,18 @@
 /** Fallback local si no hay imagen válida (colocar en /public/no-image.png). */
 export const NO_PRODUCT_IMAGE = "/no-image.png";
 
-/** Rutas bajo /uploads/*: servir sin optimizador next/image (evita 400 en prod/Docker). */
+/**
+ * Rutas servidas vía `/api/uploads/…` (sin optimizador next/image).
+ * Incluye detección de prefijos antiguos `/uploads/…` solo en datos ya guardados.
+ */
 export function isLocalUploadPath(src: string): boolean {
   const t = src.trim();
   if (!t) return false;
-  return t.startsWith("/uploads/") || t.startsWith("uploads/");
+  return (
+    t.startsWith("/api/uploads/") ||
+    t.startsWith("/uploads/") ||
+    t.startsWith("uploads/")
+  );
 }
 
 const DEBUG =
@@ -38,9 +45,19 @@ function upgradeKarambaHttp(s: string): string {
   return s;
 }
 
+/** Colapsa barras y quita prefijos `uploads/` duplicados tras `/api/uploads/`. */
+function normalizeApiUploadsRest(rest: string): string {
+  let r = rest.replace(/^\/+/, "").replace(/\/+/g, "/");
+  while (r.startsWith("uploads/")) {
+    r = r.slice("uploads/".length);
+  }
+  return r;
+}
+
 /**
  * Resuelve ruta local o URL externa (excepto placehold).
- * Nombre suelto → /uploads/products/nombre
+ * Salida siempre bajo `/api/uploads/…`. Entrada `/uploads/…` solo normaliza BD antigua.
+ * Nombre suelto → /api/uploads/products/nombre
  */
 export function resolveMediaPath(s: string): string {
   const t = s.trim();
@@ -48,15 +65,19 @@ export function resolveMediaPath(s: string): string {
   if (/^https?:\/\//i.test(t)) return upgradeKarambaHttp(t);
   if (t.startsWith("//")) return upgradeKarambaHttp(`https:${t}`);
   let p = t.startsWith("/") ? t : `/${t}`;
-  if (
-    p.startsWith("/uploads/") ||
-    p.startsWith("/img/") ||
-    p === NO_PRODUCT_IMAGE
-  ) {
-    return p;
+  p = p.replace(/\/+/g, "/");
+
+  if (p.startsWith("/api/uploads/")) {
+    const rest = normalizeApiUploadsRest(p.slice("/api/uploads/".length));
+    return `/api/uploads/${rest}`;
   }
+  if (p.startsWith("/uploads/")) {
+    const rest = normalizeApiUploadsRest(p.slice("/uploads/".length));
+    return `/api/uploads/${rest}`;
+  }
+  if (p.startsWith("/img/") || p === NO_PRODUCT_IMAGE) return p;
   if (/^\/[^/]+$/.test(p)) {
-    return `/uploads/products/${p.slice(1)}`;
+    return `/api/uploads/products/${p.slice(1)}`;
   }
   return p;
 }

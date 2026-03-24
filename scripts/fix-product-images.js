@@ -27,7 +27,7 @@ function isBlockedUrl(s) {
 function isAlreadyLocal(u) {
   const t = (u || "").trim();
   if (!t) return true;
-  if (t.startsWith("/uploads")) return true;
+  if (t.startsWith("/api/uploads") || t.startsWith("/uploads")) return true;
   return false;
 }
 
@@ -102,7 +102,7 @@ async function downloadToLocal(absoluteUrl, productId) {
     const filepath = path.join(UPLOAD_DIR, filename);
     fs.writeFileSync(filepath, buffer);
 
-    const localPath = `/uploads/products/${filename}`;
+    const localPath = `/api/uploads/products/${filename}`;
     urlToLocalPath.set(normalized, localPath);
     return localPath;
   } catch (err) {

@@ -5,6 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { readFile } from "fs/promises";
 import path from "path";
 import { isAllowedDigitalPath } from "@/lib/digital-product-upload";
+import { resolveMediaPath } from "@/lib/image-url";
+import { uploadPublicUrlToAbsolutePath } from "@/lib/upload-disk-path";
 import type { OrderStatus } from "@prisma/client";
 
 const PAID: OrderStatus[] = ["PAID", "SHIPPED", "DELIVERED"];
@@ -29,7 +31,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "No disponible" }, { status: 404 });
   }
 
-  if (!isAllowedDigitalPath(product.fileUrl)) {
+  const fileUrl =
+    resolveMediaPath(product.fileUrl) || product.fileUrl.trim();
+  if (!isAllowedDigitalPath(fileUrl)) {
     return NextResponse.json({ error: "Ruta inválida" }, { status: 400 });
   }
 
@@ -51,7 +55,10 @@ export async function GET(req: Request) {
     );
   }
 
-  const diskPath = path.join(process.cwd(), "public", product.fileUrl.replace(/^\//, ""));
+  const diskPath = uploadPublicUrlToAbsolutePath(fileUrl);
+  if (!diskPath) {
+    return NextResponse.json({ error: "Ruta inválida" }, { status: 400 });
+  }
   try {
     const buf = await readFile(diskPath);
     const downloadName = product.fileName || "descarga";

@@ -310,7 +310,7 @@ export default function ProductForm({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Imagen principal (importador /{" "}
-              <code className="text-xs">/uploads/products/…</code>)
+              <code className="text-xs">/api/uploads/products/…</code>)
             </label>
             <input
               type="text"
@@ -318,7 +318,7 @@ export default function ProductForm({
               onChange={(e) =>
                 setForm({ ...form, imageUrl: e.target.value })
               }
-              placeholder="ej: /uploads/products/mi-foto.jpg"
+              placeholder="ej: /api/uploads/products/mi-foto.jpg"
               className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm font-mono"
             />
             <p className="text-xs text-gray-400 mt-1">

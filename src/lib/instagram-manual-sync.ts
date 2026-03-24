@@ -92,7 +92,7 @@ export async function syncInstagramManualFeedRows(
         url,
         image:
           String(o.image || "").trim() ||
-          `/uploads/instagram/${sc}.jpg`,
+          `/api/uploads/instagram/${sc}.jpg`,
       };
       if (typeof o.caption === "string") saved.caption = o.caption;
       if (o.is_video === true) saved.is_video = true;
@@ -104,7 +104,7 @@ export async function syncInstagramManualFeedRows(
       syncErrors.push(`${sc}: sin contexto GraphQL, no se descargó`);
       out.push({
         url,
-        image: String(o.image || "").trim() || `/uploads/instagram/${sc}.jpg`,
+        image: String(o.image || "").trim() || `/api/uploads/instagram/${sc}.jpg`,
         ...(typeof o.caption === "string" ? { caption: o.caption } : {}),
         ...(o.is_video === true ? { is_video: true } : {}),
       });
@@ -125,7 +125,7 @@ export async function syncInstagramManualFeedRows(
       syncErrors.push(`${sc}: Instagram no devolvió miniatura`);
       out.push({
         url: post?.url || url,
-        image: String(o.image || "").trim() || `/uploads/instagram/${sc}.jpg`,
+        image: String(o.image || "").trim() || `/api/uploads/instagram/${sc}.jpg`,
         ...(typeof o.caption === "string" ? { caption: o.caption } : {}),
         ...(o.is_video === true ? { is_video: true } : {}),
       });
@@ -145,7 +145,7 @@ export async function syncInstagramManualFeedRows(
         syncErrors.push(`${sc}: descarga imagen HTTP ${imgRes.status}`);
         out.push({
           url: post.url,
-          image: String(o.image || "").trim() || `/uploads/instagram/${sc}.jpg`,
+          image: String(o.image || "").trim() || `/api/uploads/instagram/${sc}.jpg`,
           caption:
             typeof o.caption === "string" ? o.caption : post.caption || undefined,
           is_video: Boolean(o.is_video) || post.is_video,
@@ -161,7 +161,7 @@ export async function syncInstagramManualFeedRows(
           : "jpg";
       const fileName = `${sc}.${ext}`;
       await fs.writeFile(path.join(dir, fileName), buf);
-      const publicPath = `/uploads/instagram/${fileName}`;
+      const publicPath = `/api/uploads/instagram/${fileName}`;
       out.push({
         url: post.url,
         image: publicPath,
@@ -175,7 +175,7 @@ export async function syncInstagramManualFeedRows(
       );
       out.push({
         url: post.url,
-        image: String(o.image || "").trim() || `/uploads/instagram/${sc}.jpg`,
+        image: String(o.image || "").trim() || `/api/uploads/instagram/${sc}.jpg`,
         caption:
           typeof o.caption === "string" ? o.caption : post.caption || undefined,
         is_video: Boolean(o.is_video) || post.is_video,

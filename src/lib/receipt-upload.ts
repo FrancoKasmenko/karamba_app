@@ -62,5 +62,5 @@ export async function saveTransferReceipt(
   const filename = `${orderId}-${Date.now()}${ext}`;
   const full = path.join(dir, filename);
   await writeFile(full, buffer);
-  return `/uploads/transfer-receipts/${filename}`;
+  return `/api/uploads/transfer-receipts/${filename}`;
 }

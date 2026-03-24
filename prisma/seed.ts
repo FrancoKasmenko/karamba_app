@@ -172,8 +172,8 @@ async function main() {
         "Vela artesanal con aroma a rosas, hecha con cera de soja natural. Perfecta para crear ambientes c\u00e1lidos y relajantes.",
       price: 450,
       comparePrice: 550,
-      imageUrl: "/uploads/products/009b0cb6-831b-45f2-a947-53c4e63d8036.png",
-      images: ["/uploads/products/009b0cb6-831b-45f2-a947-53c4e63d8036.png"],
+      imageUrl: "/api/uploads/products/009b0cb6-831b-45f2-a947-53c4e63d8036.png",
+      images: ["/api/uploads/products/009b0cb6-831b-45f2-a947-53c4e63d8036.png"],
       featured: true,
       categoryId: velas.id,
       variants: [
@@ -188,8 +188,8 @@ async function main() {
       description:
         "Vela de lavanda con aceites esenciales naturales. Ideal para meditaci\u00f3n y relajaci\u00f3n.",
       price: 380,
-      imageUrl: "/uploads/products/00d5236f-d10f-4272-902d-2e3859b016e6.png",
-      images: ["/uploads/products/00d5236f-d10f-4272-902d-2e3859b016e6.png"],
+      imageUrl: "/api/uploads/products/00d5236f-d10f-4272-902d-2e3859b016e6.png",
+      images: ["/api/uploads/products/00d5236f-d10f-4272-902d-2e3859b016e6.png"],
       featured: true,
       categoryId: velas.id,
       variants: [
@@ -204,8 +204,8 @@ async function main() {
         "Set de 3 piezas decorativas con forma de luna. Pintadas a mano con tonos pastel.",
       price: 890,
       comparePrice: 1100,
-      imageUrl: "/uploads/products/00da9961-e129-4f0b-aff1-8fa06c13f981.jpg",
-      images: ["/uploads/products/00da9961-e129-4f0b-aff1-8fa06c13f981.jpg"],
+      imageUrl: "/api/uploads/products/00da9961-e129-4f0b-aff1-8fa06c13f981.jpg",
+      images: ["/api/uploads/products/00da9961-e129-4f0b-aff1-8fa06c13f981.jpg"],
       featured: true,
       categoryId: cuadros.id,
       variants: [
@@ -220,8 +220,8 @@ async function main() {
       description:
         "Portavelas hecho a mano en cer\u00e1mica. Cada pieza es \u00fanica e irrepetible.",
       price: 650,
-      imageUrl: "/uploads/products/00e77027-7c91-4d7b-b5f8-f3c1e5fcc34a.jpg",
-      images: ["/uploads/products/00e77027-7c91-4d7b-b5f8-f3c1e5fcc34a.jpg"],
+      imageUrl: "/api/uploads/products/00e77027-7c91-4d7b-b5f8-f3c1e5fcc34a.jpg",
+      images: ["/api/uploads/products/00e77027-7c91-4d7b-b5f8-f3c1e5fcc34a.jpg"],
       featured: true,
       categoryId: decoracion.id,
       variants: [
@@ -236,8 +236,8 @@ async function main() {
       description:
         "Cortante en MDF cortado l\u00e1ser. Ideal para reposteros y manualistas. Personalizable con la forma que necesites.",
       price: 320,
-      imageUrl: "/uploads/products/01be6a2f-9fa6-4f0e-8ad9-2757f4d3283b.jpg",
-      images: ["/uploads/products/01be6a2f-9fa6-4f0e-8ad9-2757f4d3283b.jpg"],
+      imageUrl: "/api/uploads/products/01be6a2f-9fa6-4f0e-8ad9-2757f4d3283b.jpg",
+      images: ["/api/uploads/products/01be6a2f-9fa6-4f0e-8ad9-2757f4d3283b.jpg"],
       featured: true,
       categoryId: mdf.id,
       variants: [
@@ -253,8 +253,8 @@ async function main() {
         "Figura impresa en 3D totalmente personalizable. Eleg\u00ed forma, color y tama\u00f1o. Ideal para cake toppers y decoraci\u00f3n.",
       price: 780,
       comparePrice: 950,
-      imageUrl: "/uploads/products/02213fd8-1356-4101-ae31-2e8b7f9878c5.png",
-      images: ["/uploads/products/02213fd8-1356-4101-ae31-2e8b7f9878c5.png"],
+      imageUrl: "/api/uploads/products/02213fd8-1356-4101-ae31-2e8b7f9878c5.png",
+      images: ["/api/uploads/products/02213fd8-1356-4101-ae31-2e8b7f9878c5.png"],
       featured: true,
       categoryId: impresion3d.id,
       variants: [
@@ -270,8 +270,8 @@ async function main() {
         "Kit regalo con vela arom\u00e1tica, jab\u00f3n artesanal y sales de ba\u00f1o. Presentado en caja decorativa.",
       price: 1200,
       comparePrice: 1500,
-      imageUrl: "/uploads/products/033721a6-58b9-4ce7-b4fe-f1751afb9e96.jpg",
-      images: ["/uploads/products/033721a6-58b9-4ce7-b4fe-f1751afb9e96.jpg"],
+      imageUrl: "/api/uploads/products/033721a6-58b9-4ce7-b4fe-f1751afb9e96.jpg",
+      images: ["/api/uploads/products/033721a6-58b9-4ce7-b4fe-f1751afb9e96.jpg"],
       featured: true,
       categoryId: regalos.id,
       variants: [
@@ -285,8 +285,8 @@ async function main() {
       description:
         "Difusor natural con varillas de bamb\u00fa y aceites esenciales. Duraci\u00f3n de hasta 3 meses.",
       price: 520,
-      imageUrl: "/uploads/products/03a2aa0d-b916-4956-9b1e-d72a7877a622.jpg",
-      images: ["/uploads/products/03a2aa0d-b916-4956-9b1e-d72a7877a622.jpg"],
+      imageUrl: "/api/uploads/products/03a2aa0d-b916-4956-9b1e-d72a7877a622.jpg",
+      images: ["/api/uploads/products/03a2aa0d-b916-4956-9b1e-d72a7877a622.jpg"],
       featured: true,
       categoryId: decoracion.id,
       variants: [

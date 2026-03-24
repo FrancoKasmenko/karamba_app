@@ -8,6 +8,7 @@ import { motion } from "framer-motion";
 import { FiUpload, FiCheck, FiExternalLink, FiPackage } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 import { formatPrice } from "@/lib/utils";
+import { resolveMediaPath } from "@/lib/image-url";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
 import BankLogo from "@/components/ui/bank-logo";
@@ -207,7 +208,10 @@ function TransferContent() {
                 </p>
                 {summary.transferReceiptUrl && (
                   <a
-                    href={summary.transferReceiptUrl}
+                    href={
+                      resolveMediaPath(summary.transferReceiptUrl) ||
+                      summary.transferReceiptUrl
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-xs font-bold text-green-700 underline mt-1"

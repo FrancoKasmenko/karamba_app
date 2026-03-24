@@ -5,7 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
-import { resolveProductImage, isLocalUploadPath } from "@/lib/image-url";
+import {
+  resolveProductImage,
+  isLocalUploadPath,
+  resolveMediaPath,
+} from "@/lib/image-url";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
 import {
@@ -692,7 +696,10 @@ export default function OrderDetailPage({
                 </div>
                 {order.transferReceiptUrl && (
                   <a
-                    href={order.transferReceiptUrl}
+                    href={
+                      resolveMediaPath(order.transferReceiptUrl) ||
+                      order.transferReceiptUrl
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"

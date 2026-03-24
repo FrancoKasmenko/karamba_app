@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const MAX_BYTES = 300 * 1024 * 1024; // 300 MB
-const REL_PREFIX = "/uploads/course-videos/";
+const REL_PREFIX = "/api/uploads/course-videos/";
 
 export async function POST(req: Request) {
   const { error } = await requireAdmin();

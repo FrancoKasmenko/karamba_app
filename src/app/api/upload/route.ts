@@ -7,7 +7,7 @@ import { readFormFileBuffer } from "@/lib/read-upload-file";
 
 export const runtime = "nodejs";
 
-const REL_DIR = "/uploads/products";
+const REL_DIR = "/api/uploads/products";
 
 function extFromMime(type: string): string {
   const t = type.toLowerCase();

@@ -31,7 +31,7 @@ const UPLOAD_DIR = path.join(
   "products"
 );
 
-/** URL absoluta → ruta /uploads/products/... (una descarga por URL por ejecución). */
+/** URL absoluta → ruta pública /api/uploads/products/... (una descarga por URL por ejecución). */
 const urlToLocalPath = new Map();
 
 function slugify(text) {
@@ -125,7 +125,7 @@ async function downloadImage(url, productId) {
     const filepath = path.join(UPLOAD_DIR, filename);
     fs.writeFileSync(filepath, buffer);
 
-    const localPath = `/uploads/products/${filename}`;
+    const localPath = `/api/uploads/products/${filename}`;
     urlToLocalPath.set(url, localPath);
     return localPath;
   } catch (err) {

@@ -469,7 +469,7 @@ export function parseManualInstagramFeed(raw: unknown): InstagramFeedPost[] {
     const imageRaw = typeof o.image === "string" ? o.image.trim() : "";
     const image =
       imageRaw ||
-      (sc ? `/uploads/instagram/${sc}.jpg` : "");
+      (sc ? `/api/uploads/instagram/${sc}.jpg` : "");
     if (!image) return;
     out.push({
       id: `manual-${i}`,

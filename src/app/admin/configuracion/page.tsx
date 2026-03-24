@@ -210,7 +210,7 @@ export default function AdminConfigPage() {
               <p className="text-xs text-gray-500 mb-2">
                 Solo con enlaces de Instagram: al guardar se descargan las
                 miniaturas a{" "}
-                <code className="bg-gray-100 px-1 rounded">/uploads/instagram/</code>
+                <code className="bg-gray-100 px-1 rounded">/api/uploads/instagram/</code>
                 . Podés usar solo{" "}
                 <code className="bg-gray-100 px-1 rounded">url</code>. Otras URLs
                 necesitan <code className="bg-gray-100 px-1 rounded">image</code>

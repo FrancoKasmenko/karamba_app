@@ -3,7 +3,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 
 const MAX_BYTES = 80 * 1024 * 1024;
-const PUBLIC_PREFIX = "/uploads/digital-products";
+const API_PREFIX = "/api/uploads/digital-products";
 
 function sanitizeOriginalName(name: string): string {
   return name.replace(/[^a-zA-Z0-9._\-()\s\u00f1\u00d1]/g, "_").slice(0, 120);
@@ -24,11 +24,12 @@ export async function saveDigitalProductFile(
   const full = path.join(dir, stored);
   await writeFile(full, buffer);
   return {
-    fileUrl: `${PUBLIC_PREFIX}/${stored}`,
+    fileUrl: `${API_PREFIX}/${stored}`,
     fileName: originalName.slice(0, 200) || safe,
   };
 }
 
 export function isAllowedDigitalPath(url: string): boolean {
-  return url.startsWith(`${PUBLIC_PREFIX}/`) && !url.includes("..");
+  if (!url || url.includes("..")) return false;
+  return url.startsWith(`${API_PREFIX}/`);
 }

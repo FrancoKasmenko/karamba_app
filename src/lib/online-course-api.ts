@@ -47,12 +47,19 @@ export function parseLessonVideoType(raw: unknown): LessonVideoFormType {
   return "EXTERNAL";
 }
 
-/** Prefijo en `videoUrl` para clases con MP4 subido (sin columnas extra en DB). */
-export const LESSON_UPLOAD_VIDEO_PREFIX = "/uploads/course-videos/";
+/** Prefijo canónico guardado en BD para MP4 subido (vía /api/uploads/…). */
+export const LESSON_UPLOAD_VIDEO_PREFIX = "/api/uploads/course-videos/";
+
+/** Solo lectura/ saneo de filas antiguas; no usar para nuevas URLs. */
+const LEGACY_LESSON_VIDEO_PREFIX = "/uploads/course-videos/";
 
 export function isLessonUploadVideoUrl(url: string | null | undefined): boolean {
   const u = url?.trim();
-  return !!u && u.startsWith(LESSON_UPLOAD_VIDEO_PREFIX);
+  if (!u) return false;
+  return (
+    u.startsWith(LESSON_UPLOAD_VIDEO_PREFIX) ||
+    u.startsWith(LEGACY_LESSON_VIDEO_PREFIX)
+  );
 }
 
 /** Unifica tipo enlace + archivo en un solo `videoUrl` para Prisma. */
@@ -72,15 +79,18 @@ export function lessonVideoUrlFromPayload(l: {
   return raw || null;
 }
 
-/** Solo rutas bajo /uploads/course-videos/ (subida admin). */
+/** Solo `/api/uploads/course-videos/`; acepta prefijo antiguo solo para normalizar al guardar. */
 export function sanitizeLessonVideoFile(
   path: string | null | undefined
 ): string | null {
   const p = path?.trim();
   if (!p) return null;
   if (p.includes("..") || p.includes("\\")) return null;
-  if (!p.startsWith("/uploads/course-videos/")) return null;
-  return p;
+  if (p.startsWith(LESSON_UPLOAD_VIDEO_PREFIX)) return p;
+  if (p.startsWith(LEGACY_LESSON_VIDEO_PREFIX)) {
+    return `${LESSON_UPLOAD_VIDEO_PREFIX}${p.slice(LEGACY_LESSON_VIDEO_PREFIX.length)}`;
+  }
+  return null;
 }
 
 export function prismaOnlineCourseHttpError(

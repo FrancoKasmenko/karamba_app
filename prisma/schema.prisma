@@ -353,7 +353,7 @@ model CourseLesson {
   moduleId         String
   module           CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   title            String
-  /** URL YouTube/Vimeo o ruta subida: /uploads/course-videos/… */
+  /** URL YouTube/Vimeo o ruta subida: /api/uploads/course-videos/… */
   videoUrl         String?
   content          String?  @db.Text
   durationMinutes  Int?

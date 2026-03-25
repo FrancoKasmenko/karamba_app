@@ -87,7 +87,7 @@ export default function Footer() {
               {[
                 { href: "/", label: "Inicio" },
                 { href: "/productos", label: "Productos" },
-                { href: "/soluciones-digitales", label: "Soluciones digitales" },
+                { href: "/soluciones-digitales", label: "Soluciones informáticas" },
                 { href: "/cursos", label: "Cursos" },
                 { href: "/nosotros", label: "Nosotros" },
                 { href: "/podcast", label: "Podcast" },

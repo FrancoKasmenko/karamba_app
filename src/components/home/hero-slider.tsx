@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import { isLocalUploadPath } from "@/lib/image-url";
+import { isLocalUploadPath, resolveMediaPath } from "@/lib/image-url";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 
@@ -43,7 +43,10 @@ interface BannerFromDB {
 export default function HeroSlider({ banners }: { banners?: BannerFromDB[] }) {
   const slides: SlideData[] =
     banners && banners.length > 0
-      ? banners.map((b) => ({ id: b.id, image: b.image }))
+      ? banners.map((b) => ({
+          id: b.id,
+          image: resolveMediaPath(b.image) || b.image,
+        }))
       : localSlides;
 
   const [current, setCurrent] = useState(0);

@@ -49,6 +49,11 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "www.karamba.com.uy", pathname: "/**" },
       { protocol: "http", hostname: "karamba.com.uy", pathname: "/**" },
       { protocol: "http", hostname: "www.karamba.com.uy", pathname: "/**" },
+      {
+        protocol: "https",
+        hostname: "upload.wikimedia.org",
+        pathname: "/**",
+      },
     ],
   },
 };

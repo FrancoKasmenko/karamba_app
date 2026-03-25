@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 /**
- * Indica si todos los productos del carrito son cursos online (sin envío físico).
+ * skipPhysicalDelivery: curso online y/o solo productos digitales (sin envío/retiro).
+ * onlineCourseOnly: compatibilidad; true si todos son cursos online.
  */
 export async function GET(req: Request) {
   try {
@@ -10,22 +11,37 @@ export async function GET(req: Request) {
     const ids = [...new Set(idsParam.split(",").map((s) => s.trim()).filter(Boolean))];
 
     if (ids.length === 0) {
-      return NextResponse.json({ onlineCourseOnly: false });
+      return NextResponse.json({
+        onlineCourseOnly: false,
+        skipPhysicalDelivery: false,
+      });
     }
 
     const products = await prisma.product.findMany({
       where: { id: { in: ids } },
-      select: { id: true, isOnlineCourse: true },
+      select: { id: true, isOnlineCourse: true, isDigital: true },
     });
 
     if (products.length !== ids.length) {
-      return NextResponse.json({ onlineCourseOnly: false });
+      return NextResponse.json({
+        onlineCourseOnly: false,
+        skipPhysicalDelivery: false,
+      });
     }
 
     const onlineCourseOnly = products.every((p) => p.isOnlineCourse === true);
+    const skipPhysicalDelivery = products.every(
+      (p) => p.isOnlineCourse === true || p.isDigital === true
+    );
 
-    return NextResponse.json({ onlineCourseOnly });
+    return NextResponse.json({
+      onlineCourseOnly,
+      skipPhysicalDelivery,
+    });
   } catch {
-    return NextResponse.json({ onlineCourseOnly: false });
+    return NextResponse.json({
+      onlineCourseOnly: false,
+      skipPhysicalDelivery: false,
+    });
   }
 }

@@ -173,7 +173,7 @@ export default function Navbar() {
           )}
         >
           <div className="mx-auto max-w-7xl px-3 sm:px-5 lg:px-8">
-            <div className="flex h-14 sm:h-[3.25rem] items-center justify-between gap-2">
+            <div className="flex min-h-14 sm:min-h-[3.25rem] items-center justify-between gap-2 py-1">
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
                 <Link href="/" className="flex items-center shrink-0">
                   <Image
@@ -195,48 +195,67 @@ export default function Navbar() {
                 )}
               </div>
 
-              {/* Desktop: navegación principal (sin categorías) */}
-              <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center flex-wrap">
+              {/* Desktop: una sola fila; scroll horizontal suave si no entra (evita saltos de línea) */}
+              <nav
+                className={cn(
+                  "hidden lg:flex flex-1 min-w-0 items-center justify-center gap-0 flex-nowrap overflow-x-auto overscroll-x-contain",
+                  "[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+                )}
+              >
                 <MainNavLink href="/" isDigital={isDigital}>
                   Inicio
                 </MainNavLink>
                 <MainNavLink href="/productos" isDigital={isDigital}>
                   Productos
                 </MainNavLink>
-                <MainNavLink
-                  href="/soluciones-digitales"
-                  isDigital={isDigital}
-                  emphasized={isDigital}
-                >
-                  <span className="inline-flex items-center gap-1.5">
-                    <FiCpu size={14} className="opacity-80" />
-                    Soluciones digitales
-                  </span>
-                </MainNavLink>
                 <MainNavLink href="/productos?nuevos=1" isDigital={isDigital}>
                   Nuevos
                 </MainNavLink>
                 <MainNavLink href="/cursos" isDigital={isDigital}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <FiBookOpen size={14} className="opacity-80" />
+                  <span className="inline-flex items-center gap-1 xl:gap-1.5">
+                    <FiBookOpen size={13} className="opacity-80 shrink-0" />
                     Cursos
                   </span>
                 </MainNavLink>
-                <MainNavLink href="/cursos-online" isDigital={isDigital}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <FiPlayCircle size={14} className="opacity-80" />
-                    Cursos online
+                <MainNavLink
+                  href="/cursos-online"
+                  isDigital={isDigital}
+                  title="Cursos online"
+                >
+                  <span className="inline-flex items-center gap-1 xl:gap-1.5">
+                    <FiPlayCircle size={13} className="opacity-80 shrink-0" />
+                    <span className="xl:hidden">Online</span>
+                    <span className="hidden xl:inline">Cursos online</span>
                   </span>
                 </MainNavLink>
                 {session && (
-                  <MainNavLink href="/mi-aprendizaje" isDigital={isDigital}>
-                    Mi aprendizaje
+                  <MainNavLink
+                    href="/mi-aprendizaje"
+                    isDigital={isDigital}
+                    title="Mi aprendizaje"
+                  >
+                    <span className="2xl:hidden">Aprendizaje</span>
+                    <span className="hidden 2xl:inline">Mi aprendizaje</span>
                   </MainNavLink>
                 )}
                 <MainNavLink href="/podcast" isDigital={isDigital}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <FiRadio size={14} className="opacity-80" />
+                  <span className="inline-flex items-center gap-1 xl:gap-1.5">
+                    <FiRadio size={13} className="opacity-80 shrink-0" />
                     Podcast
+                  </span>
+                </MainNavLink>
+                <MainNavLink
+                  href="/soluciones-digitales"
+                  isDigital={isDigital}
+                  emphasized={isDigital}
+                  title="Soluciones informáticas"
+                >
+                  <span className="inline-flex items-center gap-1 xl:gap-1.5">
+                    <FiCpu size={13} className="opacity-80 shrink-0" />
+                    <span className="2xl:hidden">Soluciones inf.</span>
+                    <span className="hidden 2xl:inline">
+                      Soluciones informáticas
+                    </span>
                   </span>
                 </MainNavLink>
               </nav>
@@ -649,14 +668,6 @@ export default function Navbar() {
                     isDigital={isDigital}
                   />
                   <MobileLink
-                    href="/soluciones-digitales"
-                    label="Soluciones digitales"
-                    icon={<FiCpu size={15} />}
-                    onClick={closeMobile}
-                    isDigital={isDigital}
-                    emphasized={isDigital}
-                  />
-                  <MobileLink
                     href="/productos?nuevos=1"
                     label="Nuevos"
                     onClick={closeMobile}
@@ -690,6 +701,14 @@ export default function Navbar() {
                     icon={<FiRadio size={15} />}
                     onClick={closeMobile}
                     isDigital={isDigital}
+                  />
+                  <MobileLink
+                    href="/soluciones-digitales"
+                    label="Soluciones informáticas"
+                    icon={<FiCpu size={15} />}
+                    onClick={closeMobile}
+                    isDigital={isDigital}
+                    emphasized={isDigital}
                   />
 
                   <button
@@ -960,22 +979,25 @@ function MainNavLink({
   children,
   isDigital,
   emphasized,
+  title,
 }: {
   href: string;
   children: React.ReactNode;
   isDigital?: boolean;
   emphasized?: boolean;
+  title?: string;
 }) {
   return (
     <Link
       href={href}
+      title={title}
       className={cn(
-        "text-[13px] font-medium px-3 py-2 rounded-lg transition-colors",
+        "shrink-0 whitespace-nowrap text-[11px] xl:text-[13px] font-medium px-1.5 xl:px-2.5 py-1.5 xl:py-2 rounded-lg transition-colors",
         isDigital
           ? emphasized
             ? "text-emerald-400 bg-emerald-500/10 ring-1 ring-emerald-500/20 hover:bg-emerald-500/15"
             : "text-zinc-300 hover:text-emerald-400 hover:bg-white/5"
-          : "text-warm-gray/85 hover:text-primary"
+          : "text-warm-gray/85 hover:text-primary hover:bg-primary-light/10"
       )}
     >
       {children}

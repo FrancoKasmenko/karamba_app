@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
 import { resolveStoredProductImage, isLocalUploadPath } from "@/lib/image-url";
+import { priceWithCardFee } from "@/lib/product-pricing";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -93,7 +94,7 @@ function isValidPhone(phone: string) {
 export default function CheckoutPage() {
   const { data: session } = useSession();
   const router = useRouter();
-  const { items, total, clearCart } = useCartStore();
+  const { items, clearCart } = useCartStore();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [delivery, setDelivery] = useState<DeliveryMethod>("shipping");
@@ -112,6 +113,7 @@ export default function CheckoutPage() {
   const [payMethod, setPayMethod] = useState<PayMethod>("mercadopago");
   const [accounts, setAccounts] = useState<PayAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState("");
+  const [skipPhysicalDelivery, setSkipPhysicalDelivery] = useState(false);
   const [onlineCourseOnly, setOnlineCourseOnly] = useState(false);
   const [cartMetaLoading, setCartMetaLoading] = useState(true);
 
@@ -131,6 +133,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (items.length === 0) {
       setCartMetaLoading(false);
+      setSkipPhysicalDelivery(false);
       setOnlineCourseOnly(false);
       return;
     }
@@ -140,11 +143,25 @@ export default function CheckoutPage() {
       `/api/products/checkout-meta?ids=${encodeURIComponent(cartProductIdsKey)}`
     )
       .then((r) => r.json())
-      .then((d: { onlineCourseOnly?: boolean }) => {
-        if (!cancelled) setOnlineCourseOnly(d.onlineCourseOnly === true);
-      })
+      .then(
+        (d: {
+          onlineCourseOnly?: boolean;
+          skipPhysicalDelivery?: boolean;
+        }) => {
+          if (cancelled) return;
+          const skip =
+            d.skipPhysicalDelivery !== undefined
+              ? d.skipPhysicalDelivery === true
+              : d.onlineCourseOnly === true;
+          setSkipPhysicalDelivery(skip);
+          setOnlineCourseOnly(d.onlineCourseOnly === true);
+        }
+      )
       .catch(() => {
-        if (!cancelled) setOnlineCourseOnly(false);
+        if (!cancelled) {
+          setSkipPhysicalDelivery(false);
+          setOnlineCourseOnly(false);
+        }
       })
       .finally(() => {
         if (!cancelled) setCartMetaLoading(false);
@@ -165,7 +182,7 @@ export default function CheckoutPage() {
   }, [session]);
 
   const isMontevideo = form.departamento === "Montevideo";
-  const shippingCost = onlineCourseOnly
+  const shippingCost = skipPhysicalDelivery
     ? 0
     : delivery === "pickup"
       ? 0
@@ -173,8 +190,15 @@ export default function CheckoutPage() {
         ? SHIPPING_COST_MVD
         : 0;
   const showShippingTBD =
-    !onlineCourseOnly && delivery === "shipping" && !isMontevideo;
-  const subtotal = mounted ? total() : 0;
+    !skipPhysicalDelivery && delivery === "shipping" && !isMontevideo;
+  const unitForMethod = (base: number) =>
+    payMethod === "mercadopago" ? priceWithCardFee(base) : base;
+  const subtotal = mounted
+    ? items.reduce(
+        (s, i) => s + unitForMethod(i.price) * i.quantity,
+        0
+      )
+    : 0;
   const finalTotal = subtotal + shippingCost;
 
   const validate = (): FormErrors => {
@@ -184,7 +208,7 @@ export default function CheckoutPage() {
     else if (!isValidEmail(form.email)) e.email = "Email inválido";
     if (!form.phone.trim()) e.phone = "El teléfono es obligatorio";
     else if (!isValidPhone(form.phone)) e.phone = "Formato de teléfono inválido";
-    if (!onlineCourseOnly && delivery === "shipping") {
+    if (!skipPhysicalDelivery && delivery === "shipping") {
       if (!form.address.trim()) e.address = "La dirección es obligatoria";
       if (!form.city.trim()) e.city = "La ciudad es obligatoria";
       if (!form.departamento) e.departamento = "Seleccioná un departamento";
@@ -287,13 +311,14 @@ export default function CheckoutPage() {
             quantity: i.quantity,
             variant: i.variant,
           })),
-          shipping: onlineCourseOnly
+          shipping: skipPhysicalDelivery
             ? {
                 name: form.name,
                 email: form.email,
                 phone: form.phone,
-                address:
-                  "Curso online — acceso en Mi aprendizaje (sin envío físico)",
+                address: onlineCourseOnly
+                  ? "Curso online — acceso en Mi aprendizaje (sin envío físico)"
+                  : "Producto(s) digital(es) — sin envío ni retiro",
                 city: "Digital",
                 notes: form.notes,
                 delivery: "digital",
@@ -455,7 +480,7 @@ export default function CheckoutPage() {
               </div>
             </motion.div>
 
-            {onlineCourseOnly && (
+            {skipPhysicalDelivery && (
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -468,12 +493,22 @@ export default function CheckoutPage() {
                   </div>
                   <div>
                     <h2 className="font-bold text-warm-gray text-sm mb-1">
-                      Curso online
+                      {onlineCourseOnly ? "Curso online" : "Producto digital"}
                     </h2>
                     <p className="text-sm text-gray-600 leading-relaxed">
-                      No aplica envío ni retiro en local: el acceso al curso es
-                      digital. Cuando el pago se confirme, lo vas a ver en{" "}
-                      <strong>Mi aprendizaje</strong>.
+                      {onlineCourseOnly ? (
+                        <>
+                          No aplica envío ni retiro en local: el acceso al curso
+                          es digital. Cuando el pago se confirme, lo vas a ver en{" "}
+                          <strong>Mi aprendizaje</strong>.
+                        </>
+                      ) : (
+                        <>
+                          No aplica envío ni retiro en local: cuando el pago se
+                          confirme vas a poder acceder a tu contenido digital
+                          desde tu cuenta.
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -481,7 +516,7 @@ export default function CheckoutPage() {
             )}
 
             {/* Delivery method */}
-            {!onlineCourseOnly && (
+            {!skipPhysicalDelivery && (
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -579,7 +614,7 @@ export default function CheckoutPage() {
 
             {/* Shipping address */}
             <AnimatePresence>
-              {!onlineCourseOnly && delivery === "shipping" && (
+              {!skipPhysicalDelivery && delivery === "shipping" && (
                 <motion.div
                   initial={{ opacity: 0, y: 16, height: 0 }}
                   animate={{ opacity: 1, y: 0, height: "auto" }}
@@ -679,7 +714,7 @@ export default function CheckoutPage() {
                       />
                     </div>
 
-                    {!onlineCourseOnly && delivery === "shipping" && (
+                    {!skipPhysicalDelivery && delivery === "shipping" && (
                       <div className="sm:col-span-2 p-3 rounded-xl bg-accent-light/30 text-sm">
                         {isMontevideo ? (
                           <p className="text-accent-dark font-medium">
@@ -839,7 +874,7 @@ export default function CheckoutPage() {
             </motion.div>
 
             {/* WhatsApp info */}
-            {!onlineCourseOnly && (
+            {!skipPhysicalDelivery && (
               <div className="flex items-start gap-3 p-4 rounded-xl bg-mint/15 border border-mint/30">
                 <FaWhatsapp size={20} className="text-green-600 shrink-0 mt-0.5" />
                 <p className="text-sm text-gray-600 leading-relaxed">
@@ -894,7 +929,9 @@ export default function CheckoutPage() {
                       </p>
                     </div>
                     <p className="text-sm font-semibold text-warm-gray shrink-0">
-                      {formatPrice(item.price * item.quantity)}
+                      {formatPrice(
+                        unitForMethod(item.price) * item.quantity
+                      )}
                     </p>
                   </div>
                 ))}
@@ -907,13 +944,24 @@ export default function CheckoutPage() {
                     {formatPrice(subtotal)}
                   </span>
                 </div>
+                {payMethod === "mercadopago" ? (
+                  <p className="text-[11px] text-gray-500 -mt-1">
+                    Podés <strong className="text-emerald-800">ahorrar un 12%</strong>{" "}
+                    eligiendo transferencia bancaria.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-emerald-800/90 -mt-1">
+                    <strong>12% de descuento</strong> aplicado por pago con
+                    transferencia.
+                  </p>
+                )}
 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">
-                    {onlineCourseOnly ? "Envío / retiro" : "Envío"}
+                    {skipPhysicalDelivery ? "Envío / retiro" : "Envío"}
                   </span>
                   <span className="text-gray-700 font-medium">
-                    {onlineCourseOnly ? (
+                    {skipPhysicalDelivery ? (
                       <span className="text-green-600 text-xs font-semibold">
                         No aplica (digital)
                       </span>
@@ -971,7 +1019,7 @@ export default function CheckoutPage() {
 
               <p className="text-[11px] text-gray-400 text-center mt-4 leading-relaxed">
                 Al confirmar tu compra, aceptás{" "}
-                {!onlineCourseOnly && (
+                {!skipPhysicalDelivery && (
                   <>
                     las{" "}
                     <Link

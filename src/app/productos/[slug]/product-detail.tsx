@@ -5,7 +5,8 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { FiShoppingBag, FiMinus, FiPlus } from "react-icons/fi";
 import { useCartStore } from "@/store/cart";
-import { formatPrice } from "@/lib/utils";
+import ProductPrice from "@/components/product/product-price";
+import MercadoPagoInstallments from "@/components/product/mercadopago-installments";
 import {
   resolveProductImage,
   resolveProductImagesGallery,
@@ -100,11 +101,18 @@ export default function ProductDetail({ product }: { product: Product }) {
               className="object-cover"
               priority
             />
-            {product.comparePrice && product.comparePrice > product.price && (
-              <span className="absolute top-4 left-4 bg-rose text-white text-xs font-bold px-3 py-1.5 rounded-full shadow">
-                -{Math.round(((product.comparePrice - product.price) / product.comparePrice) * 100)}%
-              </span>
-            )}
+            {product.comparePrice != null &&
+              product.comparePrice > currentPrice && (
+                <span className="absolute top-4 left-4 bg-rose text-white text-xs font-bold px-3 py-1.5 rounded-full shadow">
+                  -
+                  {Math.round(
+                    ((product.comparePrice - currentPrice) /
+                      product.comparePrice) *
+                      100
+                  )}
+                  %
+                </span>
+              )}
           </motion.div>
           {images.length > 1 && (
             <div className="flex gap-3 mt-4">
@@ -142,16 +150,14 @@ export default function ProductDetail({ product }: { product: Product }) {
             {product.name}
           </h1>
 
-          <div className="flex items-center gap-3 mt-4">
-            <span className="text-2xl font-extrabold text-primary-dark">
-              {formatPrice(currentPrice)}
-            </span>
-            {product.comparePrice && product.comparePrice > currentPrice && (
-              <span className="text-lg text-gray-400 line-through">
-                {formatPrice(product.comparePrice)}
-              </span>
-            )}
+          <div className="mt-4">
+            <ProductPrice
+              transferPrice={currentPrice}
+              comparePrice={product.comparePrice}
+            />
           </div>
+
+          <MercadoPagoInstallments baseTransferPrice={currentPrice} />
 
           {product.description && (
             <p className="mt-6 text-gray-600 leading-relaxed">

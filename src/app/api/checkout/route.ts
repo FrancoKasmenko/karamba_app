@@ -5,29 +5,23 @@ import { prisma } from "@/lib/prisma";
 import { getMercadoPagoClient, Preference } from "@/lib/mercadopago";
 import { getBaseUrl, getWebhookUrl, isPublicUrl } from "@/lib/base-url";
 import { fireAndForget, notifyOrderCreated } from "@/lib/email-events";
+import {
+  roundMoney,
+  unitPriceForPaymentMethod,
+} from "@/lib/product-pricing";
+import type { Product, Variant } from "@prisma/client";
 
-async function shippingCostForItems(
-  items: { productId?: string }[],
-  requestedCost: number
-): Promise<number> {
-  const ids = [
-    ...new Set(
-      items
-        .map((i) => i.productId)
-        .filter((id): id is string => typeof id === "string" && id.length > 0)
-    ),
-  ];
-  if (ids.length === 0) return requestedCost;
+type ProductWithVariants = Product & { variants: Variant[] };
 
-  const products = await prisma.product.findMany({
-    where: { id: { in: ids } },
-    select: { id: true, isOnlineCourse: true },
-  });
-
-  if (products.length !== ids.length) return requestedCost;
-
-  const allOnline = products.every((p) => p.isOnlineCourse);
-  return allOnline ? 0 : requestedCost;
+function baseUnitFromProduct(
+  product: ProductWithVariants,
+  variantValue?: string | null
+): number {
+  if (variantValue) {
+    const v = product.variants.find((x) => x.value === variantValue);
+    if (v && v.price != null) return roundMoney(v.price);
+  }
+  return roundMoney(product.price);
 }
 
 export async function POST(req: Request) {
@@ -49,8 +43,71 @@ export async function POST(req: Request) {
     const method =
       paymentMethod === "BANK_TRANSFER" ? "BANK_TRANSFER" : "MERCADOPAGO";
 
+    const cartItems = items as { productId?: string }[];
+    const lineProductIds: string[] = [
+      ...new Set(
+        cartItems
+          .map((i) => i.productId)
+          .filter(
+            (id): id is string => typeof id === "string" && id.length > 0
+          )
+      ),
+    ];
+
+    if (lineProductIds.length === 0) {
+      return NextResponse.json(
+        { error: "Productos inválidos" },
+        { status: 400 }
+      );
+    }
+
+    const dbProducts = await prisma.product.findMany({
+      where: { id: { in: lineProductIds } },
+      include: { variants: true },
+    });
+
+    if (dbProducts.length !== lineProductIds.length) {
+      return NextResponse.json(
+        { error: "Producto no encontrado" },
+        { status: 400 }
+      );
+    }
+
+    const productById = new Map(dbProducts.map((p) => [p.id, p]));
+
+    const skipPhysicalDelivery = dbProducts.every(
+      (p) => p.isOnlineCourse || p.isDigital
+    );
+
     const requestedShipping = Math.max(0, Number(shipping?.shippingCost) || 0);
-    const shippingCost = await shippingCostForItems(items, requestedShipping);
+    const shippingCost = skipPhysicalDelivery ? 0 : requestedShipping;
+
+    const payMethodEnum =
+      method === "BANK_TRANSFER" ? "BANK_TRANSFER" : "MERCADOPAGO";
+
+    const resolvedItems = (
+      cartItems as {
+        productId: string;
+        name?: string;
+        quantity: number;
+        variant?: string;
+      }[]
+    ).map((item) => {
+      const p = productById.get(item.productId);
+      if (!p) {
+        throw new Error("Producto no encontrado");
+      }
+      const base = baseUnitFromProduct(p, item.variant);
+      const unitCharged = unitPriceForPaymentMethod(base, payMethodEnum);
+      const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
+      return {
+        productId: item.productId,
+        name: (item.name?.trim() || p.name).slice(0, 500),
+        quantity: qty,
+        variant: item.variant,
+        price: unitCharged,
+      };
+    });
 
     if (method === "BANK_TRANSFER") {
       if (!paymentAccountId || typeof paymentAccountId !== "string") {
@@ -71,9 +128,8 @@ export async function POST(req: Request) {
         );
       }
 
-      const total = items.reduce(
-        (sum: number, item: { price: number; quantity: number }) =>
-          sum + item.price * item.quantity,
+      const total = resolvedItems.reduce(
+        (sum, item) => sum + item.price * item.quantity,
         0
       );
       const finalTotal = total + shippingCost;
@@ -95,22 +151,14 @@ export async function POST(req: Request) {
           shippingPhone: shipping.phone,
           notes: (shipping.notes || "") + noteExtra,
           items: {
-            create: items.map(
-              (item: {
-                productId: string;
-                name: string;
-                price: number;
-                quantity: number;
-                variant?: string;
-              }) => ({
-                itemType: "PRODUCT" as const,
-                productId: item.productId,
-                productName: item.name,
-                price: item.price,
-                quantity: item.quantity,
-                variant: item.variant,
-              })
-            ),
+            create: resolvedItems.map((item) => ({
+              itemType: "PRODUCT" as const,
+              productId: item.productId,
+              productName: item.name,
+              price: item.price,
+              quantity: item.quantity,
+              variant: item.variant,
+            })),
           },
         },
       });
@@ -123,9 +171,8 @@ export async function POST(req: Request) {
       });
     }
 
-    const total = items.reduce(
-      (sum: number, item: { price: number; quantity: number }) =>
-        sum + item.price * item.quantity,
+    const total = resolvedItems.reduce(
+      (sum, item) => sum + item.price * item.quantity,
       0
     );
 
@@ -144,22 +191,14 @@ export async function POST(req: Request) {
         shippingPhone: shipping.phone,
         notes: shipping.notes,
         items: {
-          create: items.map(
-            (item: {
-              productId: string;
-              name: string;
-              price: number;
-              quantity: number;
-              variant?: string;
-            }) => ({
-              itemType: "PRODUCT" as const,
-              productId: item.productId,
-              productName: item.name,
-              price: item.price,
-              quantity: item.quantity,
-              variant: item.variant,
-            })
-          ),
+          create: resolvedItems.map((item) => ({
+            itemType: "PRODUCT" as const,
+            productId: item.productId,
+            productName: item.name,
+            price: item.price,
+            quantity: item.quantity,
+            variant: item.variant,
+          })),
         },
       },
     });
@@ -174,15 +213,13 @@ export async function POST(req: Request) {
       const preference = new Preference(mpClient);
       const baseUrl = getBaseUrl();
 
-      const mpItems = items.map(
-        (item: { name: string; price: number; quantity: number }, idx: number) => ({
-          id: `item-${idx}`,
-          title: item.name,
-          unit_price: Number(item.price),
-          quantity: Number(item.quantity),
-          currency_id: "UYU",
-        })
-      );
+      const mpItems = resolvedItems.map((item, idx: number) => ({
+        id: `item-${idx}`,
+        title: item.name,
+        unit_price: Number(item.price),
+        quantity: Number(item.quantity),
+        currency_id: "UYU",
+      }));
 
       if (shippingCost > 0) {
         mpItems.push({

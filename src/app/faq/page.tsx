@@ -15,7 +15,7 @@ const faqs = [
   },
   {
     q: "¿Qué medios de pago tienen?",
-    a: "Aceptamos transferencia y depósitos a Scotiabank, Mi Dinero, OCA Blue, giros en redes de cobranza y pagos en cuotas con tarjeta de crédito a través de MercadoPago (estas cuentan con un 11% de recargo en el monto final).",
+    a: "Aceptamos transferencia y depósitos en ITAU, Mi Dinero, Scotiabank y BROU, además de giro en redes de cobranza. También pagos en cuotas con tarjeta de crédito a través de Mercado Pago. En la tienda mostramos precios con descuento por transferencia; con Mercado Pago el total corresponde al precio de lista sin ese descuento.",
   },
   {
     q: "¿Realizan envíos?",

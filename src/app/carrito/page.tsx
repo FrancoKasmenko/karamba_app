@@ -112,8 +112,14 @@ export default function CarritoPage() {
             {formatPrice(total())}
           </span>
         </div>
+        <p className="text-xs text-gray-500 mb-2 leading-relaxed">
+          Estos importes ya incluyen un <strong>12% de descuento</strong> por
+          pagar con <strong>transferencia bancaria</strong>. En el checkout
+          elegís el medio de pago.
+        </p>
         <p className="text-xs text-gray-400 mb-4">
-          Los costos de envío se calculan al finalizar la compra
+          Los costos de envío se calculan al finalizar la compra (no aplican a
+          carritos solo digitales).
         </p>
         <Link href="/checkout" className="block">
           <Button size="lg" className="w-full">

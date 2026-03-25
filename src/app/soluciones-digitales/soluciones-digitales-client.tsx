@@ -111,7 +111,7 @@ export default function SolucionesDigitalesClient() {
           </Link>
           <span className="text-zinc-600">/</span>
           <span className="text-zinc-300 font-medium tracking-wide">
-            Soluciones digitales
+            Soluciones informáticas
           </span>
         </div>
       </div>
@@ -128,7 +128,7 @@ export default function SolucionesDigitalesClient() {
               Karamba · extensión digital
             </p>
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[2.75rem] font-bold leading-[1.12] tracking-tight text-white">
-              Soluciones digitales para{" "}
+              Soluciones informáticas para{" "}
               <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-300 bg-clip-text text-transparent">
                 potenciar tu emprendimiento
               </span>

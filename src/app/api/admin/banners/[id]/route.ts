@@ -13,17 +13,28 @@ export async function PUT(req: Request, context: RouteContext) {
   const { id } = await context.params;
   try {
     const body = await req.json();
+    const data: {
+      title: string | null;
+      subtitle: string | null;
+      buttonText: string | null;
+      buttonLink: string | null;
+      image: string;
+      active: boolean;
+      order?: number;
+    } = {
+      title: body.title ?? null,
+      subtitle: body.subtitle ?? null,
+      buttonText: body.buttonText ?? null,
+      buttonLink: body.buttonLink ?? null,
+      image: String(body.image || ""),
+      active: body.active !== false,
+    };
+    if (typeof body.order === "number" && !Number.isNaN(body.order)) {
+      data.order = Math.floor(body.order);
+    }
     const banner = await prisma.banner.update({
       where: { id },
-      data: {
-        title: body.title,
-        subtitle: body.subtitle,
-        buttonText: body.buttonText,
-        buttonLink: body.buttonLink,
-        image: body.image,
-        order: body.order,
-        active: body.active,
-      },
+      data,
     });
     return NextResponse.json(banner);
   } catch {

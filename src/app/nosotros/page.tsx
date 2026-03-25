@@ -34,7 +34,7 @@ export default function NosotrosPage() {
           </h2>
           <div className="space-y-4 text-gray-600 leading-relaxed text-base sm:text-lg">
             <p>
-              Karamba nació desde el amor por crear para mis hijos y el deseo de
+              Karamba nació desde las ganas de crear para mis hijos y el deseo de
               estar presente, acompañando cada paso de su crecimiento.
             </p>
             <p>
@@ -161,19 +161,19 @@ export default function NosotrosPage() {
             {
               icon: FiHeart,
               title: "Pasi\u00f3n",
-              desc: "Cada producto nace de la pasi\u00f3n por crear algo bello y significativo.",
+              desc: "Por crear herramientas y productos pensados para transformar tus ideas.",
               color: "bg-primary-light/40 text-primary-dark",
             },
             {
               icon: FiStar,
-              title: "Calidad",
-              desc: "No nos conformamos con menos. Buscamos la excelencia en cada detalle.",
+              title: "Compromiso",
+              desc: "Con cada detalle, diseñando productos lindos, funcionales y que realmente resuelven.",
               color: "bg-accent-light/60 text-accent-dark",
             },
             {
               icon: FiFeather,
-              title: "Delicadeza",
-              desc: "Trabajamos con cuidado y dedicaci\u00f3n, respetando cada material y proceso.",
+              title: "Prop\u00f3sito",
+              desc: "Acompa\u00f1arte en tu camino creativo para que tus ideas crezcan y se hagan realidad.",
               color: "bg-secondary-light/50 text-secondary-dark",
             },
           ].map((item, i) => (

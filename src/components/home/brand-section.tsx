@@ -6,9 +6,9 @@ import { FiHeart, FiStar, FiPackage, FiSmile } from "react-icons/fi";
 const features = [
   {
     icon: FiHeart,
-    title: "Hecho con Amor",
+    title: "Criterio y cuidado",
     description:
-      "Cada producto es creado a mano con dedicación y pasión, cuidando cada detalle.",
+      "Fabricamos y elegimos piezas para el catálogo con el mismo estándar: útiles, lindas y pensadas para usar de verdad.",
     iconBg: "bg-primary-light/40",
     iconColor: "text-primary-dark",
     borderHover: "hover:border-primary-light/50",
@@ -26,7 +26,7 @@ const features = [
     icon: FiPackage,
     title: "Envío Seguro",
     description:
-      "Empacamos con cariño y enviamos a todo Uruguay para que llegue perfecto.",
+      "Empacamos con cuidado y enviamos a todo Uruguay para que llegue en buen estado.",
     iconBg: "bg-mint/50",
     iconColor: "text-green-700",
     borderHover: "hover:border-mint/60",

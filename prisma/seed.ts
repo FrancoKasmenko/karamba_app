@@ -138,7 +138,7 @@ async function main() {
     update: {},
     create: {
       id: "banner-1",
-      title: "Productos hechos con amor",
+      title: "Creatividad con criterio",
       subtitle: "Descubr\u00ed piezas \u00fanicas y artesanales que cuentan una historia",
       buttonText: "Ver Productos",
       buttonLink: "/productos",
@@ -371,7 +371,7 @@ async function main() {
     create: {
       id: "main",
       siteName: "Karamba",
-      siteDescription: "Productos artesanales hechos con amor",
+      siteDescription: "Productos y herramientas para tu creatividad. Tienda online con envíos en Uruguay.",
       contactEmail: "karamba@vera.com.uy",
       contactPhone: "2509 9128",
       contactAddress: "Solferino 4041, Montevideo",

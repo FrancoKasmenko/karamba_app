@@ -121,7 +121,7 @@ export default function PurchaseInfo() {
             <div>
               <p className="text-sm text-gray-500 leading-relaxed">
                 Al comprar en <strong className="text-warm-gray">Karamba – Tienda Creativa</strong>, estás aceptando estas condiciones de venta.
-                Gracias por confiar en nuestro trabajo y apoyar un emprendimiento hecho con amor, dedicación y magia.
+                Gracias por confiar en nuestro trabajo y apoyar un emprendimiento familiar que apuesta al detalle y a la creatividad.
               </p>
             </div>
           </div>

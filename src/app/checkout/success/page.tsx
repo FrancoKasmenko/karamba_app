@@ -406,8 +406,8 @@ function SuccessContent() {
       </motion.div>
 
       <p className="text-center text-xs text-gray-400 mt-8">
-        Gracias por confiar en Karamba. Tu compra apoya un emprendimiento hecho
-        con amor, dedicación y magia.
+        Gracias por confiar en Karamba. Tu compra apoya un emprendimiento que
+        apuesta al detalle y a la creatividad.
       </p>
     </div>
   );

@@ -40,7 +40,7 @@ export default function Footer() {
                 isDigital ? "text-zinc-500" : "text-gray-500"
               )}
             >
-              Productos artesanales hechos con amor y dedicaci&oacute;n.
+              Productos y herramientas para tu creatividad, con env&iacute;os en Uruguay.
               Cada pieza es &uacute;nica, creada especialmente para vos.
             </p>
             <div className="flex gap-3 mt-4">

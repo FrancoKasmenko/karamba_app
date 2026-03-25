@@ -159,7 +159,7 @@ export default function ProductsClient({
           Nuestros Productos
         </h1>
         <p className="mt-2 text-gray-500">
-          Cada pieza es &uacute;nica y hecha con amor
+          Piezas &uacute;nicas, elaboraciones propias y productos curados para tu creatividad
         </p>
       </div>
 

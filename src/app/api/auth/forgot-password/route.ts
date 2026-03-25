@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 import { createHash, randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { normalizeEmail } from "@/lib/sanitize";
-import { notifyPasswordResetRequest } from "@/lib/email-events";
-import { getBaseUrl } from "@/lib/base-url";
+import { fireAndForget, notifyPasswordResetEmail } from "@/lib/email-events";
 import { checkForgotPasswordRateLimit } from "@/lib/forgot-password-rate-limit";
-import { isEmailConfigured } from "@/lib/email-transport";
 
 function hashToken(raw: string): string {
   return createHash("sha256").update(raw, "utf8").digest("hex");
@@ -60,24 +58,7 @@ export async function POST(req: Request) {
       }),
     ]);
 
-    if (!isEmailConfigured()) {
-      console.warn(
-        "[forgot-password] Email no configurado — token creado pero sin envío"
-      );
-      return NextResponse.json(generic);
-    }
-
-    const resetUrl = `${getBaseUrl()}/login/restablecer-contrasena?token=${encodeURIComponent(rawToken)}`;
-    const dedupeKey = `pwreset:${tokenHash}`;
-    const sent = await notifyPasswordResetRequest(
-      user.email,
-      user.name,
-      resetUrl,
-      dedupeKey
-    );
-    if (!sent.ok) {
-      console.error("[forgot-password] envío falló:", sent.error);
-    }
+    fireAndForget(notifyPasswordResetEmail(user.id, rawToken));
 
     return NextResponse.json(generic);
   } catch (e) {

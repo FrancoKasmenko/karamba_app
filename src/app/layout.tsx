@@ -14,15 +14,15 @@ const poppins = Poppins({
   variable: "--font-sans",
 });
 
-const defaultTitle = "Karamba | Productos Artesanales con Amor";
+const defaultTitle = "Karamba - Tienda online";
 const defaultDescription =
-  "Descubrí productos artesanales únicos, hechos con amor y dedicación. Karamba - creamos para vos desde el corazón.";
+  "Productos, herramientas y propuestas para tu creatividad. Tienda online Karamba, con envíos en Uruguay.";
 
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),
   title: {
     default: defaultTitle,
-    template: "%s | Karamba",
+    template: "Karamba | %s",
   },
   description: defaultDescription,
   keywords: [

@@ -5,27 +5,23 @@ import { motion } from "framer-motion";
 
 const highlights = [
   {
-    title: "💛 CREAR CON AMOR",
+    title: "Pasión",
     body: [
-      "Todo lo que hacemos nace desde un lugar real.",
-      "No es solo producir, es crear pensando en quién lo va a recibir, usar o disfrutar.",
+      "Por crear herramientas y productos pensados para transformar tus ideas.",
     ],
     accent: "from-primary-light/30 to-primary-light/10 border-primary-light/40",
   },
   {
-    title: "✨ HACERLO MÁS SIMPLE",
+    title: "Compromiso",
     body: [
-      "Sabemos lo que es emprender desde cero.",
-      "Por eso buscamos crear herramientas y soluciones que hagan el camino más fácil para otras creativas.",
+      "Con cada detalle, diseñando productos lindos, funcionales y que realmente resuelven.",
     ],
     accent: "from-accent-light/40 to-lavender/20 border-accent-light/50",
   },
   {
-    title: "🌿 SEGUIR APRENDIENDO",
+    title: "Propósito",
     body: [
-      "No buscamos ser perfectos.",
-      "Buscamos mejorar, probar, equivocarnos y volver a intentar.",
-      "Porque así es como realmente se crece.",
+      "Acompañarte en tu camino creativo para que tus ideas crezcan y se hagan realidad.",
     ],
     accent: "from-mint/35 to-secondary-light/25 border-mint/50",
   },

@@ -15,7 +15,7 @@ const faqs = [
   },
   {
     q: "¿Qué medios de pago tienen?",
-    a: "Aceptamos transferencia y depósitos en ITAU, Mi Dinero, Scotiabank y BROU, además de giro en redes de cobranza. También pagos en cuotas con tarjeta de crédito a través de Mercado Pago. En la tienda mostramos precios con descuento por transferencia; con Mercado Pago el total corresponde al precio de lista sin ese descuento.",
+    a: "Aceptamos transferencia y depósitos en ITAU, Mi Dinero, Scotiabank y BROU, además de giro en redes de cobranza. También pagos en cuotas con tarjeta de crédito a través de Mercado Pago. En la web, si pagás con depósito o transferencia, tenés un 12% de descuento sobre el total del pedido; con Mercado Pago el total corresponde al precio de lista sin ese descuento.",
   },
   {
     q: "¿Realizan envíos?",

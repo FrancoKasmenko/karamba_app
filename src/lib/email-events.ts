@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { getBaseUrl } from "@/lib/base-url";
 import { formatPrice } from "@/lib/utils";
@@ -39,7 +40,7 @@ export async function notifyPasswordResetRequest(
     title: "Restablecer contraseña",
     preheader: "Enlace válido por 1 hora",
     innerHtml: `
-      <p style="margin:0 0 16px;font-size:16px;">Hola ${escapeHtml(name || "")},</p>
+      <p style="margin:0 0 16px;font-size:16px;">Hola${name?.trim() ? ` ${escapeHtml(name.trim())}` : ""},</p>
       <p style="margin:0 0 24px;font-size:15px;line-height:1.55;">Recibimos una solicitud para restablecer tu contraseña en <strong>Karamba</strong>. Si no fuiste vos, ignorá este mensaje.</p>
       <div style="text-align:center;margin:28px 0;">
         ${emailButton(resetUrl, "Elegir nueva contraseña")}
@@ -71,6 +72,36 @@ export async function notifyPasswordResetRequest(
     return { ok: true, skipped: true };
   }
   return { ok: true };
+}
+
+/**
+ * Mismo patrón que {@link notifyWelcomeEmail}: recibe userId, vuelve a leer el usuario
+ * y envía el correo (evita divergencias con la ruta API).
+ */
+export async function notifyPasswordResetEmail(
+  userId: string,
+  rawToken: string
+): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, name: true },
+  });
+  if (!user?.email) return;
+
+  const tokenHash = createHash("sha256").update(rawToken, "utf8").digest("hex");
+  const resetUrl = `${getBaseUrl()}/login/restablecer-contrasena?token=${encodeURIComponent(rawToken)}`;
+  const dedupeKey = `pwreset:${tokenHash}`;
+
+  const result = await notifyPasswordResetRequest(
+    user.email,
+    user.name,
+    resetUrl,
+    dedupeKey
+  );
+
+  if (!result.ok) {
+    console.error("[EMAIL] notifyPasswordResetEmail falló:", result.error);
+  }
 }
 
 export async function notifyPasswordChangedEmail(userId: string): Promise<void> {

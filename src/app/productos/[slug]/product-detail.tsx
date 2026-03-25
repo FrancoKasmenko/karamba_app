@@ -258,7 +258,7 @@ export default function ProductDetail({ product }: { product: Product }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                  Hecho a mano con amor
+                  Selección y detalle en cada pieza
                 </div>
               </>
             )}

@@ -4,18 +4,28 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { slugify } from "@/lib/utils";
 import { validateDigitalFilesForSave } from "@/lib/product-digital-files";
+import { nextResponseForPrismaSchemaDrift } from "@/lib/prisma-schema-drift-response";
 
 export async function GET() {
   const { error } = await requireAdmin();
   if (error) return error;
 
-  const products = await prisma.product.findMany({
-    where: { isOnlineCourse: false },
-    include: { variants: true, category: true },
-    orderBy: { createdAt: "desc" },
-  });
-
-  return NextResponse.json(products);
+  try {
+    const products = await prisma.product.findMany({
+      where: { isOnlineCourse: false },
+      include: { variants: true, category: true },
+      orderBy: { createdAt: "desc" },
+    });
+    return NextResponse.json(products);
+  } catch (e) {
+    const drift = nextResponseForPrismaSchemaDrift(e);
+    if (drift) return drift;
+    console.error("GET /api/admin/products:", e);
+    return NextResponse.json(
+      { error: "Error al cargar productos" },
+      { status: 500 }
+    );
+  }
 }
 
 export async function POST(req: Request) {

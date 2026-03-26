@@ -7,6 +7,7 @@ import {
   normalizeProductDigitalFiles,
   validateDigitalFilesForSave,
 } from "@/lib/product-digital-files";
+import { nextResponseForPrismaSchemaDrift } from "@/lib/prisma-schema-drift-response";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -17,16 +18,26 @@ export async function GET(_req: Request, context: RouteContext) {
   if (error) return error;
 
   const { id } = await context.params;
-  const product = await prisma.product.findUnique({
-    where: { id },
-    include: { variants: true, category: true },
-  });
+  try {
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: { variants: true, category: true },
+    });
 
-  if (!product) {
-    return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    if (!product) {
+      return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+    }
+
+    return NextResponse.json(product);
+  } catch (e) {
+    const drift = nextResponseForPrismaSchemaDrift(e);
+    if (drift) return drift;
+    console.error("GET /api/admin/products/[id]:", e);
+    return NextResponse.json(
+      { error: "Error al cargar el producto" },
+      { status: 500 }
+    );
   }
-
-  return NextResponse.json(product);
 }
 
 export async function PUT(req: Request, context: RouteContext) {

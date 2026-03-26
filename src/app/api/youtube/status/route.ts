@@ -56,8 +56,7 @@ async function resolveChannelId(): Promise<string | null> {
   try {
     const res = await fetch(`https://www.youtube.com/@${encodeURIComponent(handle)}`, {
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "User-Agent": BROWSER_UA,
         "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
       },
       signal: AbortSignal.timeout(12_000),
@@ -85,6 +84,59 @@ async function resolveChannelId(): Promise<string | null> {
   }
 }
 
+const BROWSER_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36";
+
+/**
+ * YouTube suele devolver 404 al RSS desde IPs de servidor; la página /videos
+ * sigue sirviendo ytInitialData con videoId.
+ */
+async function fetchLatestFromChannelVideosTab(channelId: string): Promise<{
+  videoId: string;
+  title: string;
+  thumbnail: string;
+} | null> {
+  const url = `https://www.youtube.com/channel/${encodeURIComponent(channelId)}/videos`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": BROWSER_UA,
+        "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(14_000),
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const seen = new Set<string>();
+    const re = /"videoId":"([\w-]{11})"/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(html)) !== null) {
+      const id = m[1];
+      if (id.length !== 11 || seen.has(id)) continue;
+      seen.add(id);
+      const slice = html.slice(Math.max(0, m.index - 400), m.index + 400);
+      const titleMatch =
+        slice.match(/"title":\{"runs":\[\{"text":"([^"]{1,200})"/) ||
+        slice.match(/"simpleText":"([^"]{1,200})"/);
+      const title = titleMatch?.[1]
+        ? titleMatch[1]
+            .replace(/\\u0026/g, "&")
+            .replace(/\\n/g, " ")
+            .trim()
+        : "";
+      return {
+        videoId: id,
+        title,
+        thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchLatestFromRss(channelId: string): Promise<{
   videoId: string;
   title: string;
@@ -93,12 +145,11 @@ async function fetchLatestFromRss(channelId: string): Promise<{
   const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(channelId)}`;
   const res = await fetch(url, {
     headers: {
-      "User-Agent":
-        "Mozilla/5.0 (compatible; KarambaSite/1.0; +https://karamba.com.uy)",
+      "User-Agent": BROWSER_UA,
       Accept: "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
     },
+    cache: "no-store",
     signal: AbortSignal.timeout(12_000),
-    next: { revalidate: 120 },
   });
   if (!res.ok) return null;
   const xml = await res.text();
@@ -125,10 +176,7 @@ async function fetchLiveVideoIdViaEmbed(channelId: string): Promise<string | nul
   try {
     const url = `https://www.youtube.com/embed/live_stream?channel=${encodeURIComponent(channelId)}`;
     const res = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-      },
+      headers: { "User-Agent": BROWSER_UA },
       signal: AbortSignal.timeout(12_000),
     });
     if (!res.ok) return null;
@@ -241,6 +289,15 @@ export async function GET() {
   }
 
   if (!latestVideoId) {
+    const fromTab = await fetchLatestFromChannelVideosTab(channelId);
+    if (fromTab) {
+      latestVideoId = fromTab.videoId;
+      latestVideoTitle = fromTab.title || latestVideoTitle;
+      latestVideoThumbnail = fromTab.thumbnail;
+    }
+  }
+
+  if (!latestVideoId) {
     const rss = await fetchLatestFromRss(channelId);
     if (rss) {
       latestVideoId = rss.videoId;
@@ -271,7 +328,7 @@ export async function GET() {
     liveVideoId,
     latestVideoId,
     latestVideoTitle: latestVideoTitle?.slice(0, 60),
-    source: apiKey ? "api+rss-fallback" : "rss+embed-live",
+    source: apiKey ? "api+videos-tab/rss" : "videos-tab+rss+embed-live",
   });
 
   cache = { data: result, ts: Date.now() };

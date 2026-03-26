@@ -1,9 +1,9 @@
 "use client";
 import { api } from "@/lib/public-api";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { FiPlus, FiEdit, FiTrash2 } from "react-icons/fi";
+import { FiPlus, FiEdit, FiTrash2, FiSearch } from "react-icons/fi";
 import { formatPrice } from "@/lib/utils";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
@@ -21,31 +21,60 @@ interface Product {
 export default function AdminProductosPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const fetchProducts = async () => {
-    try {
-      const res = await fetch(api("/api/admin/products"));
-      const data = await res.json();
-      setProducts(data);
-    } catch {
-      toast.error("Error al cargar productos");
-    }
-    setLoading(false);
-  };
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
   useEffect(() => {
-    fetchProducts();
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const loadProducts = useCallback(async (search: string): Promise<Product[]> => {
+    try {
+      const path =
+        search.length > 0
+          ? `/api/admin/products?q=${encodeURIComponent(search)}`
+          : "/api/admin/products";
+      const res = await fetch(api(path));
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        return data as Product[];
+      }
+      if (data?.error) toast.error(data.error);
+      return [];
+    } catch {
+      toast.error("Error al cargar productos");
+      return [];
+    }
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    loadProducts(debouncedQuery).then((list) => {
+      if (!cancelled) {
+        setProducts(list);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedQuery, loadProducts]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Estás seguro de eliminar este producto?")) return;
 
+    setLoading(true);
     try {
       await fetch(api(`/api/admin/products/${id}`), { method: "DELETE" });
       toast.success("Producto eliminado");
-      fetchProducts();
+      const list = await loadProducts(debouncedQuery);
+      setProducts(list);
     } catch {
       toast.error("Error al eliminar");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -62,11 +91,41 @@ export default function AdminProductosPage() {
         </Link>
       </div>
 
+      <div className="mb-4">
+        <label className="sr-only" htmlFor="admin-product-search">
+          Buscar productos
+        </label>
+        <div className="relative max-w-md">
+          <FiSearch
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={18}
+            aria-hidden
+          />
+          <input
+            id="admin-product-search"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar por nombre, descripción o slug…"
+            autoComplete="off"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm"
+          />
+        </div>
+      </div>
+
       {loading ? (
         <div className="text-center py-10 text-gray-400">Cargando...</div>
       ) : products.length === 0 ? (
         <div className="text-center py-10 text-gray-400">
-          No hay productos aún. ¡Creá el primero!
+          {debouncedQuery ?
+            <>
+              No hay productos que coincidan con{" "}
+              <span className="font-medium text-gray-600">
+                &ldquo;{debouncedQuery}&rdquo;
+              </span>
+              .
+            </>
+          : "No hay productos aún. ¡Creá el primero!"}
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-primary-light/30 overflow-hidden">

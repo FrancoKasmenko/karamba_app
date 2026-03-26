@@ -6,13 +6,24 @@ import { slugify } from "@/lib/utils";
 import { validateDigitalFilesForSave } from "@/lib/product-digital-files";
 import { nextResponseForPrismaSchemaDrift } from "@/lib/prisma-schema-drift-response";
 
-export async function GET() {
+export async function GET(req: Request) {
   const { error } = await requireAdmin();
   if (error) return error;
 
+  const q = new URL(req.url).searchParams.get("q")?.trim() ?? "";
+
   try {
+    const where: Prisma.ProductWhereInput = { isOnlineCourse: false };
+    if (q.length > 0) {
+      where.OR = [
+        { name: { contains: q, mode: "insensitive" } },
+        { description: { contains: q, mode: "insensitive" } },
+        { slug: { contains: q, mode: "insensitive" } },
+      ];
+    }
+
     const products = await prisma.product.findMany({
-      where: { isOnlineCourse: false },
+      where,
       include: { variants: true, category: true },
       orderBy: { createdAt: "desc" },
     });

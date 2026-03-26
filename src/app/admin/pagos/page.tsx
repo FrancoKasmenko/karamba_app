@@ -284,7 +284,11 @@ export default function AdminPagosPage() {
 
           <p className="text-xs text-gray-500 mb-3">
             Configurá esta URL en tu panel de MercadoPago → Webhooks para
-            recibir notificaciones de pago:
+            recibir notificaciones de pago. Mercado Pago exige{" "}
+            <strong>https://</strong> en producción: la variable{" "}
+            <code className="bg-soft-gray px-1 rounded">BASE_URL</code> o{" "}
+            <code className="bg-soft-gray px-1 rounded">NEXT_PUBLIC_SITE_URL</code>{" "}
+            debe ser tu dominio con HTTPS (sin barra final).
           </p>
 
           {webhookUrl ? (

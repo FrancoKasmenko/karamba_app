@@ -7,7 +7,11 @@ import {
   getMercadoPagoClient,
   Preference,
 } from "@/lib/mercadopago";
-import { getBaseUrl, getWebhookUrl, isPublicUrl } from "@/lib/base-url";
+import {
+  getWebhookUrl,
+  isPublicUrl,
+  mercadoPagoAbsoluteUrl,
+} from "@/lib/base-url";
 import { fireAndForget, notifyOrderCreated } from "@/lib/email-events";
 
 export async function POST(req: Request) {
@@ -82,8 +86,19 @@ export async function POST(req: Request) {
           );
         }
         const preference = new Preference(mpClient);
-        const baseUrl = getBaseUrl();
-        const preferenceBody = {
+        const slug = encodeURIComponent(courseSession.course.slug);
+        const back_urls = {
+          success: mercadoPagoAbsoluteUrl(
+            `/cursos/reserva-exitosa?orderId=${encodeURIComponent(prevOrder.id)}`
+          ),
+          failure: mercadoPagoAbsoluteUrl(
+            `/cursos/${slug}?error=payment_failed`
+          ),
+          pending: mercadoPagoAbsoluteUrl(
+            `/cursos/reserva-exitosa?orderId=${encodeURIComponent(prevOrder.id)}&pending=true`
+          ),
+        };
+        const preferenceBody: Record<string, unknown> = {
           items: [
             {
               id: `course-${courseSession.course.id}`,
@@ -93,19 +108,16 @@ export async function POST(req: Request) {
               currency_id: "UYU",
             },
           ],
-          back_urls: {
-            success: `${baseUrl}/cursos/reserva-exitosa?orderId=${prevOrder.id}`,
-            failure: `${baseUrl}/cursos/${courseSession.course.slug}?error=payment_failed`,
-            pending: `${baseUrl}/cursos/reserva-exitosa?orderId=${prevOrder.id}&pending=true`,
-          },
-          auto_return: "approved" as const,
+          back_urls,
+          auto_return: "approved",
           external_reference: prevOrder.id,
           payer: { email: session.user.email },
-          notification_url: undefined as string | undefined,
         };
         if (isPublicUrl()) preferenceBody.notification_url = getWebhookUrl();
         try {
-          const result = await preference.create({ body: preferenceBody });
+          const result = await preference.create({
+            body: preferenceBody as Parameters<Preference["create"]>[0]["body"],
+          });
           return NextResponse.json({
             orderId: prevOrder.id,
             bookingId: existingBooking.id,
@@ -186,9 +198,20 @@ export async function POST(req: Request) {
     fireAndForget(notifyOrderCreated(order.id));
 
     const preference = new Preference(mpClient);
-    const baseUrl = getBaseUrl();
+    const slug = encodeURIComponent(courseSession.course.slug);
+    const back_urls = {
+      success: mercadoPagoAbsoluteUrl(
+        `/cursos/reserva-exitosa?orderId=${encodeURIComponent(order.id)}`
+      ),
+      failure: mercadoPagoAbsoluteUrl(
+        `/cursos/${slug}?error=payment_failed`
+      ),
+      pending: mercadoPagoAbsoluteUrl(
+        `/cursos/reserva-exitosa?orderId=${encodeURIComponent(order.id)}&pending=true`
+      ),
+    };
 
-    const preferenceBody = {
+    const preferenceBody: Record<string, unknown> = {
       items: [
         {
           id: `course-${courseSession.course.id}`,
@@ -198,15 +221,10 @@ export async function POST(req: Request) {
           currency_id: "UYU",
         },
       ],
-      back_urls: {
-        success: `${baseUrl}/cursos/reserva-exitosa?orderId=${order.id}`,
-        failure: `${baseUrl}/cursos/${courseSession.course.slug}?error=payment_failed`,
-        pending: `${baseUrl}/cursos/reserva-exitosa?orderId=${order.id}&pending=true`,
-      },
-      auto_return: "approved" as const,
+      back_urls,
+      auto_return: "approved",
       external_reference: order.id,
       payer: { email: session.user.email },
-      notification_url: undefined as string | undefined,
     };
 
     if (isPublicUrl()) {
@@ -214,7 +232,9 @@ export async function POST(req: Request) {
     }
 
     try {
-      const result = await preference.create({ body: preferenceBody });
+      const result = await preference.create({
+        body: preferenceBody as Parameters<Preference["create"]>[0]["body"],
+      });
       return NextResponse.json({
         orderId: order.id,
         bookingId: booking.id,

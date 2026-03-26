@@ -7,7 +7,11 @@ import {
   getMercadoPagoClient,
   Preference,
 } from "@/lib/mercadopago";
-import { getBaseUrl, getWebhookUrl, isPublicUrl } from "@/lib/base-url";
+import {
+  getWebhookUrl,
+  isPublicUrl,
+  mercadoPagoAbsoluteUrl,
+} from "@/lib/base-url";
 import { fireAndForget, notifyOrderCreated } from "@/lib/email-events";
 import {
   roundMoney,
@@ -262,7 +266,6 @@ export async function POST(req: Request) {
     fireAndForget(notifyOrderCreated(order.id));
 
     const preference = new Preference(mercadoPagoClient!);
-    const baseUrl = getBaseUrl();
 
     const mpItems = chargedItems.map((item, idx: number) => ({
       id: `item-${idx}`,
@@ -282,19 +285,24 @@ export async function POST(req: Request) {
       });
     }
 
-    const preferenceBody = {
+    const back_urls = {
+      success: mercadoPagoAbsoluteUrl(
+        `/checkout/success?orderId=${encodeURIComponent(order.id)}`
+      ),
+      failure: mercadoPagoAbsoluteUrl("/checkout?error=payment_failed"),
+      pending: mercadoPagoAbsoluteUrl(
+        `/checkout/success?orderId=${encodeURIComponent(order.id)}&pending=true`
+      ),
+    };
+
+    const preferenceBody: Record<string, unknown> = {
       items: mpItems,
-      back_urls: {
-        success: `${baseUrl}/checkout/success?orderId=${order.id}`,
-        failure: `${baseUrl}/checkout?error=payment_failed`,
-        pending: `${baseUrl}/checkout/success?orderId=${order.id}&pending=true`,
-      },
-      auto_return: "approved" as const,
+      back_urls,
+      auto_return: "approved",
       external_reference: order.id,
       payer: {
         email: shipping.email || session.user.email,
       },
-      notification_url: undefined as string | undefined,
     };
 
     if (isPublicUrl()) {
@@ -303,13 +311,15 @@ export async function POST(req: Request) {
       console.log(`[CHECKOUT] Webhook URL: ${webhookUrl}`);
     } else {
       console.log(
-        "[CHECKOUT] URL local detectada, webhook omitido. Usá BASE_URL con ngrok para recibir webhooks."
+        "[CHECKOUT] URL local detectada, webhook omitido. Usá BASE_URL con HTTPS (p. ej. ngrok) para recibir webhooks."
       );
     }
 
     let result;
     try {
-      result = await preference.create({ body: preferenceBody });
+      result = await preference.create({
+        body: preferenceBody as Parameters<Preference["create"]>[0]["body"],
+      });
     } catch (mpErr) {
       console.error("[CHECKOUT] Mercado Pago API:", mpErr);
       const detail = describeMercadoPagoError(mpErr);
@@ -319,13 +329,17 @@ export async function POST(req: Request) {
           data: { status: "CANCELLED" },
         })
         .catch(() => {});
-      const hint =
-        "En Admin → Pagos pegá solo el Access token de credenciales de producción (no hace falta Client ID ni Client Secret; no pongas la Public key en el campo del token).";
+      const urlIssue = /back_url|auto_return|invalid_back|notification_url/i.test(
+        detail
+      );
+      const hint = urlIssue
+        ? "Mercado Pago exige URLs HTTPS públicas: definí BASE_URL o NEXT_PUBLIC_SITE_URL con https://tudominio.com (sin barra final). En local usá una URL HTTPS de ngrok."
+        : "Si el error no es de URLs: en Admin → Pagos usá solo el Access token de producción (no la Public key en ese campo).";
       return NextResponse.json(
         {
           error: detail
-            ? `Mercado Pago: ${detail}. ${hint}`
-            : `No se pudo crear el pago en Mercado Pago. ${hint} Revisá que sea el token de producción y que no tenga espacios de más.`,
+            ? `Mercado Pago: ${detail} ${hint}`
+            : `No se pudo crear el pago en Mercado Pago. ${hint}`,
         },
         { status: 502 }
       );

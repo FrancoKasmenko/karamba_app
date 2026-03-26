@@ -46,7 +46,7 @@ export default function OlvideContrasenaPage() {
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
               <Image
-                src="/img/karamba.png"
+                src="/no-image.png"
                 alt="Karamba"
                 width={200}
                 height={64}

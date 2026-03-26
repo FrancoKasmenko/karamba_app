@@ -19,11 +19,40 @@ export default function ContactoPage() {
     email: "",
     message: "",
   });
+  const [honeypot, setHoneypot] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("\u00a1Mensaje enviado! Te responderemos pronto.");
-    setForm({ name: "", email: "", message: "" });
+    if (submitting) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          email: form.email,
+          message: form.message,
+          _hp: honeypot,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        error?: string;
+      };
+      if (!res.ok) {
+        toast.error(data.error || "No se pudo enviar el mensaje.");
+        return;
+      }
+      toast.success("\u00a1Mensaje enviado! Te responderemos pronto.");
+      setForm({ name: "", email: "", message: "" });
+      setHoneypot("");
+    } catch {
+      toast.error("Error de conexi\u00f3n. Prob\u00e1 de nuevo.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -52,7 +81,17 @@ export default function ContactoPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-5">
+            <input
+              type="text"
+              name="_hp"
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+              className="sr-only"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+            />
             <div>
               <label className="block text-sm font-semibold text-warm-gray mb-1.5">
                 Nombre
@@ -89,8 +128,8 @@ export default function ContactoPage() {
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm resize-none bg-white"
               />
             </div>
-            <Button type="submit" size="lg" className="w-full">
-              Enviar Mensaje
+            <Button type="submit" size="lg" className="w-full" disabled={submitting}>
+              {submitting ? "Enviando\u2026" : "Enviar Mensaje"}
             </Button>
           </form>
         </motion.div>

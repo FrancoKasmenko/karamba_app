@@ -2,6 +2,7 @@ import { verifySync } from "otplib";
 import { prisma } from "@/lib/prisma";
 import { decryptTotpSecret } from "@/lib/two-factor-crypto";
 import { tryConsumeBackupCode } from "@/lib/two-factor-backup";
+import { normalizeTwoFactorCodePayload } from "@/lib/two-factor-code-normalize";
 
 const TOTP_WINDOW_SEC = 30;
 
@@ -16,7 +17,7 @@ export async function verifyAdminSecondFactor(
   userId: string,
   codeRaw: string
 ): Promise<TotpLoginResult> {
-  const code = codeRaw.trim();
+  const code = normalizeTwoFactorCodePayload(codeRaw);
   if (!code) {
     return { ok: false, error: "Código requerido" };
   }

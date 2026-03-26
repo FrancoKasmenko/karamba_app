@@ -125,7 +125,7 @@ function TransferContent() {
       >
         <div className="flex justify-center mb-6">
           <Image
-            src="/img/karamba.png"
+            src="/no-image.png"
             alt="Karamba"
             width={140}
             height={48}

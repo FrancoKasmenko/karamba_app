@@ -8,6 +8,10 @@ import {
   verifyAdminSecondFactor,
   removeUsedBackupCode,
 } from "@/lib/two-factor-verify-login";
+import {
+  isValidTwoFactorCodePayload,
+  normalizeTwoFactorCodePayload,
+} from "@/lib/two-factor-code-normalize";
 
 const SESSION_MAX_AGE_SEC = 30 * 24 * 60 * 60;
 
@@ -40,9 +44,15 @@ export async function POST(req: NextRequest) {
   }
 
   const body = (await req.json()) as { code?: string };
-  const code = (body.code || "").trim();
-  if (!code) {
-    return NextResponse.json({ error: "Código requerido" }, { status: 400 });
+  const code = normalizeTwoFactorCodePayload(body.code || "");
+  if (!isValidTwoFactorCodePayload(code)) {
+    return NextResponse.json(
+      {
+        error:
+          "Ingresá 6 dígitos de la app o un código de respaldo completo (letras y números).",
+      },
+      { status: 400 }
+    );
   }
 
   const result = await verifyAdminSecondFactor(userId, code);

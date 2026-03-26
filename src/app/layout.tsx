@@ -36,8 +36,8 @@ export const metadata: Metadata = {
     "decoracion",
   ],
   icons: {
-    icon: [{ url: "/brand/icon.png", type: "image/png" }],
-    apple: "/brand/icon.png",
+    icon: [{ url: "/img/karamba.png", type: "image/png" }],
+    apple: "/img/karamba.png",
   },
   openGraph: {
     title: defaultTitle,

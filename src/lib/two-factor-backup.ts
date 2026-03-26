@@ -21,7 +21,12 @@ export async function tryConsumeBackupCode(
   input: string,
   hashes: string[]
 ): Promise<{ index: number } | null> {
-  const code = input.trim().toUpperCase().replace(/\s+/g, "");
+  const code = input
+    .trim()
+    .replace(/\s+/g, "")
+    .replace(/-/g, "")
+    .replace(/[^0-9A-Fa-f]/g, "")
+    .toUpperCase();
   if (code.length < 8) return null;
   for (let i = 0; i < hashes.length; i++) {
     if (await bcrypt.compare(code, hashes[i])) {

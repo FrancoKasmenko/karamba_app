@@ -177,7 +177,7 @@ export default function Navbar() {
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
                 <Link href="/" className="flex items-center shrink-0">
                   <Image
-                    src="/img/karamba.png"
+                    src="/no-image.png"
                     alt="Karamba"
                     width={140}
                     height={45}
@@ -569,7 +569,7 @@ export default function Navbar() {
                 )}
               >
                 <Image
-                  src="/img/karamba.png"
+                  src="/no-image.png"
                   alt="Karamba"
                   width={100}
                   height={32}

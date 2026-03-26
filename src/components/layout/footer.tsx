@@ -25,7 +25,7 @@ export default function Footer() {
           {/* Brand */}
           <div>
             <Image
-              src="/img/karamba.png"
+              src="/no-image.png"
               alt="Karamba"
               width={140}
               height={45}

@@ -15,13 +15,19 @@ export function isEmailConfigured(): boolean {
   );
 }
 
+export type DeliverEmailExtras = {
+  cc?: string | string[];
+  replyTo?: string;
+};
+
 /**
  * Entrega el correo (Resend prioridad, si no SMTP). Lanza si ambos fallan.
  */
 export async function deliverEmail(
   to: string,
   subject: string,
-  html: string
+  html: string,
+  extras?: DeliverEmailExtras
 ): Promise<void> {
   const from = getFrom();
 
@@ -33,6 +39,14 @@ export async function deliverEmail(
       to: [to],
       subject,
       html,
+      ...(extras?.cc != null && extras.cc !== ""
+        ? {
+            cc: Array.isArray(extras.cc) ? extras.cc : [extras.cc],
+          }
+        : {}),
+      ...(extras?.replyTo?.trim()
+        ? { replyTo: extras.replyTo.trim() }
+        : {}),
     });
     if (error) throw new Error(error.message);
     return;
@@ -50,7 +64,18 @@ export async function deliverEmail(
       secure,
       auth: { user, pass },
     });
-    await transporter.sendMail({ from, to, subject, html });
+    await transporter.sendMail({
+      from,
+      to,
+      subject,
+      html,
+      ...(extras?.cc != null && extras.cc !== ""
+        ? { cc: extras.cc }
+        : {}),
+      ...(extras?.replyTo?.trim()
+        ? { replyTo: extras.replyTo.trim() }
+        : {}),
+    });
     return;
   }
 

@@ -8,6 +8,10 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
+import {
+  isValidTwoFactorCodePayload,
+  normalizeTwoFactorCodePayload,
+} from "@/lib/two-factor-code-normalize";
 
 function safeNextPath(raw: string | null): string {
   if (!raw) return "/admin";
@@ -26,14 +30,11 @@ function Login2FAInner() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const raw = code.trim().replace(/\s+/g, "");
-    const digitsOnly = raw.replace(/\D/g, "");
-    const payload =
-      digitsOnly.length >= 6 && /^\d+$/.test(digitsOnly)
-        ? digitsOnly.slice(0, 6)
-        : raw.toUpperCase().slice(0, 24);
-    if (payload.length < 6) {
-      toast.error("Ingresá el código de 6 dígitos o un código de respaldo");
+    const payload = normalizeTwoFactorCodePayload(code);
+    if (!isValidTwoFactorCodePayload(payload)) {
+      toast.error(
+        "Ingresá los 6 dígitos de la app o el código de respaldo completo (10 caracteres, letras A–F y números)"
+      );
       return;
     }
     setLoading(true);
@@ -92,7 +93,7 @@ function Login2FAInner() {
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
               <Image
-                src="/img/karamba.png"
+                src="/no-image.png"
                 alt="Karamba"
                 width={200}
                 height={64}
@@ -117,13 +118,14 @@ function Login2FAInner() {
               </label>
               <input
                 type="text"
-                inputMode="numeric"
+                inputMode="text"
                 autoComplete="one-time-code"
+                autoCapitalize="characters"
                 autoFocus
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm bg-soft-gray/30 tracking-widest text-center text-lg font-mono"
-                placeholder="000000"
+                placeholder="000000 o código de respaldo"
               />
             </div>
 

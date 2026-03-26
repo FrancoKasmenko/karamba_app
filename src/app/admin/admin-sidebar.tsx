@@ -132,7 +132,7 @@ export default function AdminSidebar() {
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-white/80 border border-primary-light/30 p-2 shadow-sm">
             <Image
-              src="/img/karamba.png"
+              src="/no-image.png"
               alt="Karamba"
               width={100}
               height={32}

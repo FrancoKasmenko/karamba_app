@@ -127,7 +127,7 @@ export default function SiteModals() {
           {current.layout === "TEXT_LOGO" && (
             <div className="flex justify-center mb-5">
               <Image
-                src="/img/karamba.png"
+                src="/no-image.png"
                 alt="Karamba"
                 width={140}
                 height={44}

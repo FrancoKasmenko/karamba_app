@@ -9,6 +9,9 @@ services:
       db:
         condition: service_healthy
     restart: always
+    # Sin esto, cada recreación del contenedor borra lo subido a public/uploads (banners, productos, etc.)
+    volumes:
+      - uploads_data:/app/public/uploads
 
   db:
     image: postgres:15
@@ -30,3 +33,4 @@ services:
 
 volumes:
   db_data:
+  uploads_data:

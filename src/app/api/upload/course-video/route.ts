@@ -43,9 +43,17 @@ export async function POST(req: Request) {
       );
     }
 
-    if (mime && mime !== "video/mp4") {
+    const mimeOk =
+      !mime ||
+      mime === "video/mp4" ||
+      mime === "video/x-m4v" ||
+      (mime === "application/octet-stream" && ext === ".mp4");
+    if (!mimeOk) {
       return NextResponse.json(
-        { error: "Formato no válido. Usá MP4 (video/mp4)." },
+        {
+          error:
+            "Formato no válido. Usá un archivo .mp4 (algunos navegadores envían otro tipo MIME; probá de nuevo o otro archivo).",
+        },
         { status: 400 }
       );
     }
@@ -68,12 +76,6 @@ export async function POST(req: Request) {
     );
     mkdirSync(uploadDir, { recursive: true });
     const filepath = path.join(uploadDir, filename);
-
-    console.log("UPLOAD DEBUG (course-video):");
-    console.log("Type:", mime || "(vacío)");
-    console.log("Size:", size);
-    console.log("Buffer length:", buffer.length);
-    console.log("Path:", filepath);
 
     writeFileSync(filepath, buffer);
 

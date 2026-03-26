@@ -22,6 +22,8 @@ import {
 } from "react-icons/fi";
 import toast from "react-hot-toast";
 import Image from "next/image";
+import { resolveMediaPath, isLocalUploadPath } from "@/lib/image-url";
+import Button from "@/components/ui/button";
 
 interface Order {
   id: string;
@@ -30,6 +32,18 @@ interface Order {
   createdAt: string;
   shippingName: string | null;
   items: { productName: string; quantity: number; price: number; variant: string | null }[];
+}
+
+interface OnlineEnrollment {
+  id: string;
+  progress: number;
+  lastLessonId: string | null;
+  onlineCourse: {
+    title: string;
+    slug: string;
+    image: string | null;
+    isPublished: boolean;
+  };
 }
 
 interface Booking {
@@ -93,11 +107,14 @@ export default function ProfileClient({
   user,
   orders,
   bookings,
+  onlineEnrollments = [],
   admin2FARequired = false,
 }: {
   user: UserData | null;
   orders: Order[];
   bookings: Booking[];
+  /** Cursos online (compra / acceso) — mismo criterio que «Mi aprendizaje» */
+  onlineEnrollments?: OnlineEnrollment[];
   /** Venís del panel admin sin 2FA: hay que activarlo antes de volver */
   admin2FARequired?: boolean;
 }) {
@@ -232,6 +249,11 @@ export default function ProfileClient({
     }
   };
 
+  const onlinePublished = onlineEnrollments.filter(
+    (e) => e.onlineCourse.isPublished
+  );
+  const cursosTabCount = bookings.length + onlinePublished.length;
+
   const tabs = [
     { id: "datos" as Tab, label: "Mis datos", icon: FiUser, count: null },
     { id: "ordenes" as Tab, label: "Pedidos", icon: FiPackage, count: orders.length },
@@ -241,7 +263,7 @@ export default function ProfileClient({
       icon: FiDownload,
       count: downloads.length,
     },
-    { id: "cursos" as Tab, label: "Cursos", icon: FiBookOpen, count: bookings.length },
+    { id: "cursos" as Tab, label: "Cursos", icon: FiBookOpen, count: cursosTabCount },
   ];
 
   const activeBookings = bookings.filter((b) => b.status !== "CANCELLED");
@@ -785,15 +807,88 @@ export default function ProfileClient({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          {bookings.length === 0 ? (
+          {onlinePublished.length === 0 && bookings.length === 0 ? (
             <div className="bg-white rounded-2xl border border-primary-light/30 p-12 text-center">
               <FiBookOpen size={40} className="mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-400 mb-4">No estás inscripta en ningún curso</p>
-              <Link href="/cursos" className="text-sm text-primary font-medium hover:underline">
-                Ver cursos disponibles →
-              </Link>
+              <p className="text-gray-400 mb-4">
+                No tenés cursos presenciales ni cursos online en tu cuenta.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center text-sm">
+                <Link href="/cursos" className="text-primary font-medium hover:underline">
+                  Cursos con fecha →
+                </Link>
+                <Link href="/cursos-online" className="text-primary font-medium hover:underline">
+                  Cursos online →
+                </Link>
+              </div>
             </div>
           ) : (
+            <div className="space-y-8">
+              {onlinePublished.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-bold text-warm-gray mb-3 uppercase tracking-wider">
+                    Cursos online
+                  </h3>
+                  <div className="space-y-3">
+                    {onlinePublished.map((e) => {
+                      const c = e.onlineCourse;
+                      const img = c.image ? resolveMediaPath(c.image) : "";
+                      return (
+                        <div
+                          key={e.id}
+                          className="bg-white rounded-2xl border border-primary-light/20 p-4 sm:p-5 flex flex-col sm:flex-row gap-4"
+                        >
+                          <div className="relative w-full sm:w-40 aspect-video shrink-0 rounded-xl overflow-hidden bg-soft-gray">
+                            {img ? (
+                              <Image
+                                src={img}
+                                alt=""
+                                fill
+                                unoptimized={isLocalUploadPath(img)}
+                                className="object-cover"
+                                sizes="160px"
+                              />
+                            ) : null}
+                          </div>
+                          <div className="flex-1 min-w-0 flex flex-col justify-center gap-3">
+                            <h4 className="font-display font-semibold text-warm-gray">
+                              {c.title}
+                            </h4>
+                            <div className="h-2 rounded-full bg-gray-100 overflow-hidden max-w-md">
+                              <div
+                                className="h-full bg-primary transition-all"
+                                style={{ width: `${Math.min(100, e.progress)}%` }}
+                              />
+                            </div>
+                            <p className="text-xs text-gray-400">
+                              {Math.round(e.progress)}% completado
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              <Link href={`/curso/${c.slug}/contenido`}>
+                                <Button size="sm">
+                                  {e.lastLessonId ? "Continuar" : "Empezar"}
+                                </Button>
+                              </Link>
+                              <Link href={`/curso/${c.slug}`}>
+                                <Button variant="outline" size="sm">
+                                  Detalle
+                                </Button>
+                              </Link>
+                              <Link href="/mi-aprendizaje">
+                                <Button variant="ghost" size="sm">
+                                  Mi aprendizaje
+                                </Button>
+                              </Link>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {bookings.length > 0 && (
             <div className="space-y-3">
               {activeBookings.length > 0 && (
                 <div className="mb-6">
@@ -909,6 +1004,8 @@ export default function ProfileClient({
                       ))}
                   </div>
                 </div>
+              )}
+            </div>
               )}
             </div>
           )}

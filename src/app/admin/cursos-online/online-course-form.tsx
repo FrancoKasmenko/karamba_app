@@ -124,7 +124,11 @@ export default function OnlineCourseForm({
     if (!file) return;
 
     const okExt = file.name.toLowerCase().endsWith(".mp4");
-    const okMime = !file.type || file.type === "video/mp4";
+    const okMime =
+      !file.type ||
+      file.type === "video/mp4" ||
+      file.type === "video/x-m4v" ||
+      file.type === "application/octet-stream";
     if (!okExt || !okMime) {
       toast.error("Solo se permiten archivos MP4");
       return;

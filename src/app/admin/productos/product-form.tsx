@@ -498,7 +498,7 @@ export default function ProductForm({
               <input
                 ref={digitalFileRef}
                 type="file"
-                accept="application/pdf,application/zip,image/*,.zip,.rar,.7z"
+                accept="application/pdf,application/zip,image/*,.zip,.rar,.7z,.stl,.obj,.glb,.gltf,.fbx,.blend,.3mf,.step,.stp,.dae,model/*"
                 className="hidden"
                 onChange={handleDigitalUpload}
               />

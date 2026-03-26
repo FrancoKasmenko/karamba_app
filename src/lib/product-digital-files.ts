@@ -1,5 +1,6 @@
-import { isAllowedDigitalPath } from "@/lib/digital-product-path";
-import { resolveMediaPath } from "@/lib/image-url";
+import {
+  canonicalizeDigitalProductFileUrl,
+} from "@/lib/digital-product-path";
 import {
   DIGITAL_FILE_MAX_BYTES,
   MAX_DIGITAL_FILES_PER_PRODUCT,
@@ -17,9 +18,11 @@ function parseJsonDigitalFiles(raw: unknown): DigitalFileEntry[] {
     const o = item as Record<string, unknown>;
     const fileUrl = typeof o.fileUrl === "string" ? o.fileUrl.trim() : "";
     if (!fileUrl) continue;
+    const canonical = canonicalizeDigitalProductFileUrl(fileUrl);
+    if (!canonical) continue;
     const nameRaw = typeof o.fileName === "string" ? o.fileName.trim() : "";
     const fileName = (nameRaw || "archivo").slice(0, 200);
-    out.push({ fileUrl, fileName });
+    out.push({ fileUrl: canonical, fileName });
   }
   return out.slice(0, MAX_DIGITAL_FILES_PER_PRODUCT);
 }
@@ -37,12 +40,11 @@ export function normalizeProductDigitalFiles(product: {
   const u = product.fileUrl?.trim();
   if (!u) return [];
   const fileName = (product.fileName?.trim() || "descarga").slice(0, 200);
-  return [{ fileUrl: u, fileName }];
-}
-
-function resolvedAllowsDigitalAccess(storedUrl: string): boolean {
-  const resolved = resolveMediaPath(storedUrl) || storedUrl.trim();
-  return isAllowedDigitalPath(resolved);
+  const canonical = canonicalizeDigitalProductFileUrl(u);
+  if (!canonical) {
+    return [{ fileUrl: u, fileName }];
+  }
+  return [{ fileUrl: canonical, fileName }];
 }
 
 /**
@@ -76,12 +78,17 @@ export function validateDigitalFilesForSave(
     if (!fileUrl) {
       return { ok: false, error: "Cada archivo debe tener una URL guardada" };
     }
-    if (!resolvedAllowsDigitalAccess(fileUrl)) {
-      return { ok: false, error: "Ruta de archivo digital no permitida" };
+    const canonical = canonicalizeDigitalProductFileUrl(fileUrl);
+    if (!canonical) {
+      return {
+        ok: false,
+        error:
+          "Ruta de archivo digital no permitida. Volvé a subir el archivo desde el botón «Agregar archivo» (solo archivos en /uploads/digital-products).",
+      };
     }
     const nameRaw = typeof o.fileName === "string" ? o.fileName.trim() : "";
     value.push({
-      fileUrl,
+      fileUrl: canonical,
       fileName: (nameRaw || "archivo").slice(0, 200),
     });
   }

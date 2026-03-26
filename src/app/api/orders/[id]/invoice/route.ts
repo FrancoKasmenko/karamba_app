@@ -344,11 +344,20 @@ export async function GET(_req: Request, context: RouteContext) {
 </body>
 </html>`;
 
+  const chromePath = process.env.PUPPETEER_EXECUTABLE_PATH?.trim();
+
   let browser;
   try {
     browser = await puppeteer.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      executablePath: chromePath || undefined,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-gpu",
+        "--font-render-hinting=none",
+      ],
     });
 
     const page = await browser.newPage();
@@ -372,7 +381,10 @@ export async function GET(_req: Request, context: RouteContext) {
     if (browser) await browser.close();
     console.error("[INVOICE] Error generando PDF:", err);
     return NextResponse.json(
-      { error: "Error al generar factura" },
+      {
+        error:
+          "Error al generar factura. En el servidor suele faltar Chromium para Puppeteer: revisá el Dockerfile (chromium + PUPPETEER_EXECUTABLE_PATH).",
+      },
       { status: 500 }
     );
   }

@@ -23,6 +23,7 @@ export default async function PerfilPage({ searchParams }: PageProps) {
   let user = null;
   let orders: unknown[] = [];
   let bookings: unknown[] = [];
+  let onlineEnrollments: unknown[] = [];
 
   try {
     user = await prisma.user.findUnique({
@@ -66,6 +67,32 @@ export default async function PerfilPage({ searchParams }: PageProps) {
       },
       orderBy: { createdAt: "desc" },
     });
+
+    const purchases = await prisma.userCoursePurchase.findMany({
+      where: { userId: session.user.id },
+      select: { onlineCourseId: true },
+      distinct: ["onlineCourseId"],
+    });
+    const onlineCourseIds = purchases.map((p) => p.onlineCourseId);
+    if (onlineCourseIds.length > 0) {
+      onlineEnrollments = await prisma.userCourse.findMany({
+        where: {
+          userId: session.user.id,
+          onlineCourseId: { in: onlineCourseIds },
+        },
+        include: {
+          onlineCourse: {
+            select: {
+              title: true,
+              slug: true,
+              image: true,
+              isPublished: true,
+            },
+          },
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+    }
   } catch {
     // DB not connected
   }
@@ -75,6 +102,7 @@ export default async function PerfilPage({ searchParams }: PageProps) {
       user={user}
       orders={JSON.parse(JSON.stringify(orders))}
       bookings={JSON.parse(JSON.stringify(bookings))}
+      onlineEnrollments={JSON.parse(JSON.stringify(onlineEnrollments))}
       admin2FARequired={admin2FARequired}
     />
   );

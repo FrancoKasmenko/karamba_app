@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
@@ -95,8 +96,8 @@ export default function AdminCuponesPage() {
 
   const load = () => {
     Promise.all([
-      fetch("/api/admin/coupons").then((r) => r.json()),
-      fetch("/api/admin/categories").then((r) => r.json()),
+      fetch(api("/api/admin/coupons")).then((r) => r.json()),
+      fetch(api("/api/admin/categories")).then((r) => r.json()),
     ])
       .then(([c, cats]) => {
         setCoupons(Array.isArray(c) ? c : []);
@@ -154,7 +155,7 @@ export default function AdminCuponesPage() {
 
     try {
       if (editing) {
-        const res = await fetch(`/api/admin/coupons/${editing}`, {
+        const res = await fetch(api(`/api/admin/coupons/${editing}`), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -166,7 +167,7 @@ export default function AdminCuponesPage() {
         }
         toast.success("Cupón actualizado");
       } else {
-        const res = await fetch("/api/admin/coupons", {
+        const res = await fetch(api("/api/admin/coupons"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -187,7 +188,7 @@ export default function AdminCuponesPage() {
 
   const del = async (id: string) => {
     if (!confirm("¿Eliminar este cupón?")) return;
-    const res = await fetch(`/api/admin/coupons/${id}`, { method: "DELETE" });
+    const res = await fetch(api(`/api/admin/coupons/${id}`), { method: "DELETE" });
     if (res.ok) {
       toast.success("Eliminado");
       load();

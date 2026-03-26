@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -47,7 +48,7 @@ export default function AdminModalesPage() {
   const [imageUploading, setImageUploading] = useState(false);
 
   const load = () => {
-    fetch("/api/admin/site-modals")
+    fetch(api("/api/admin/site-modals"))
       .then((r) => r.json())
       .then((d) => setModals(Array.isArray(d) ? d : []))
       .catch(() => toast.error("Error al cargar"))
@@ -108,7 +109,7 @@ export default function AdminModalesPage() {
 
     try {
       if (editing) {
-        const res = await fetch(`/api/admin/site-modals/${editing}`, {
+        const res = await fetch(api(`/api/admin/site-modals/${editing}`), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -120,7 +121,7 @@ export default function AdminModalesPage() {
         }
         toast.success("Modal actualizado");
       } else {
-        const res = await fetch("/api/admin/site-modals", {
+        const res = await fetch(api("/api/admin/site-modals"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -147,7 +148,7 @@ export default function AdminModalesPage() {
     try {
       const fd = new FormData();
       fd.set("file", file);
-      const res = await fetch("/api/admin/site-modals/upload", {
+      const res = await fetch(api("/api/admin/site-modals/upload"), {
         method: "POST",
         body: fd,
       });
@@ -167,7 +168,7 @@ export default function AdminModalesPage() {
 
   const del = async (id: string) => {
     if (!confirm("¿Eliminar este modal?")) return;
-    const res = await fetch(`/api/admin/site-modals/${id}`, { method: "DELETE" });
+    const res = await fetch(api(`/api/admin/site-modals/${id}`), { method: "DELETE" });
     if (res.ok) {
       toast.success("Eliminado");
       load();

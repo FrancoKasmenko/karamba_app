@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
@@ -78,7 +79,7 @@ export default function EditCoursePage() {
   );
 
   const fetchCourse = () => {
-    fetch(`/api/admin/courses/${params.id}`)
+    fetch(api(`/api/admin/courses/${params.id}`))
       .then((r) => r.json())
       .then((d) => {
         setCourse(d);
@@ -97,7 +98,7 @@ export default function EditCoursePage() {
     if (!newSession.date || !newSession.startTime || !newSession.endTime) return;
     setAddingSession(true);
 
-    await fetch(`/api/admin/courses/${params.id}/sessions`, {
+    await fetch(api(`/api/admin/courses/${params.id}/sessions`), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newSession),
@@ -111,12 +112,12 @@ export default function EditCoursePage() {
 
   const handleDeleteSession = async (sessionId: string) => {
     if (!confirm("¿Eliminar esta sesión y todas sus reservas?")) return;
-    await fetch(`/api/admin/sessions/${sessionId}`, { method: "DELETE" });
+    await fetch(api(`/api/admin/sessions/${sessionId}`), { method: "DELETE" });
     fetchCourse();
   };
 
   const handleBookingStatus = async (bookingId: string, status: string) => {
-    await fetch(`/api/admin/bookings/${bookingId}`, {
+    await fetch(api(`/api/admin/bookings/${bookingId}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
@@ -132,8 +133,7 @@ export default function EditCoursePage() {
     }
     setManualBookingBusy(sessionId);
     try {
-      const res = await fetch(
-        `/api/admin/course-sessions/${sessionId}/manual-booking`,
+      const res = await fetch(api(`/api/admin/course-sessions/${sessionId}/manual-booking`),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },

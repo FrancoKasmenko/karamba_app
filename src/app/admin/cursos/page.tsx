@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -31,7 +32,7 @@ export default function AdminCoursesPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchCourses = () => {
-    fetch("/api/admin/courses")
+    fetch(api("/api/admin/courses"))
       .then((r) => r.json())
       .then(setCourses)
       .catch(() => {})
@@ -42,12 +43,12 @@ export default function AdminCoursesPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar este curso y todas sus sesiones?")) return;
-    await fetch(`/api/admin/courses/${id}`, { method: "DELETE" });
+    await fetch(api(`/api/admin/courses/${id}`), { method: "DELETE" });
     fetchCourses();
   };
 
   const togglePublish = async (id: string, published: boolean) => {
-    await fetch(`/api/admin/courses/${id}`, {
+    await fetch(api(`/api/admin/courses/${id}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ published: !published }),

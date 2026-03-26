@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -36,7 +37,7 @@ export default function AdminOrdenesPage() {
   const [filter, setFilter] = useState("ALL");
 
   useEffect(() => {
-    fetch("/api/admin/orders")
+    fetch(api("/api/admin/orders"))
       .then((r) => r.json())
       .then((data) => {
         setOrders(data);

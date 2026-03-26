@@ -1,5 +1,5 @@
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { loadKarambaLogoBytes } from "@/lib/brand-logo";
+import { loadCertificateLogoBytes } from "@/lib/brand-logo";
 
 const ROSE = rgb(0.91, 0.39, 0.48);
 const ROSE_LIGHT = rgb(0.99, 0.89, 0.93);
@@ -41,7 +41,7 @@ export async function buildCourseCertificatePdf(opts: {
   let logoDrawn = false;
   let imageBottomY = 0;
 
-  const loaded = await loadKarambaLogoBytes();
+  const loaded = await loadCertificateLogoBytes();
   if (loaded) {
     try {
       const embedded =

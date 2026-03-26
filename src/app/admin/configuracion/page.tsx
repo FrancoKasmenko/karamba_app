@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import Button from "@/components/ui/button";
@@ -32,7 +33,7 @@ export default function AdminConfigPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch("/api/admin/settings")
+    fetch(api("/api/admin/settings"))
       .then((r) => r.json())
       .then((data) => {
         const rawManual = (data as { instagramFeedManual?: unknown })
@@ -63,7 +64,7 @@ export default function AdminConfigPage() {
     setSaving(true);
 
     try {
-      const res = await fetch("/api/admin/settings", {
+      const res = await fetch(api("/api/admin/settings"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

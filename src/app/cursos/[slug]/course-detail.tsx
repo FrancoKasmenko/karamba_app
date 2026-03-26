@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
@@ -53,7 +54,7 @@ export default function CourseDetail() {
 
   useEffect(() => {
     if (!params.slug) return;
-    fetch(`/api/courses/${params.slug}`)
+    fetch(api(`/api/courses/${params.slug}`))
       .then((r) => {
         if (!r.ok) throw new Error();
         return r.json();
@@ -79,7 +80,7 @@ export default function CourseDetail() {
     setError("");
 
     try {
-      const res = await fetch("/api/courses/book", {
+      const res = await fetch(api("/api/courses/book"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId: selectedSession }),

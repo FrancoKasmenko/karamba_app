@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -296,7 +297,7 @@ export default function AdminCategoriasPage() {
   );
 
   const fetchCategories = useCallback(async () => {
-    const res = await fetch("/api/admin/categories");
+    const res = await fetch(api("/api/admin/categories"));
     if (!res.ok) {
       toast.error("No se pudieron cargar las categorías");
       setLoading(false);
@@ -333,7 +334,7 @@ export default function AdminCategoriasPage() {
   const persistReorder = async (
     updates: { id: string; order: number; parentId: string | null }[]
   ) => {
-    const res = await fetch("/api/admin/categories/reorder", {
+    const res = await fetch(api("/api/admin/categories/reorder"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: updates }),
@@ -383,7 +384,7 @@ export default function AdminCategoriasPage() {
       setEditingNameId(null);
       return;
     }
-    const res = await fetch(`/api/admin/categories/${id}`, {
+    const res = await fetch(api(`/api/admin/categories/${id}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -414,7 +415,7 @@ export default function AdminCategoriasPage() {
         (c.parentId ?? null) === (newParentId ?? null) && c.id !== catId
     );
     const maxOrder = others.reduce((m, s) => Math.max(m, s.order), -1);
-    const res = await fetch(`/api/admin/categories/${catId}`, {
+    const res = await fetch(api(`/api/admin/categories/${catId}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -439,7 +440,7 @@ export default function AdminCategoriasPage() {
       toast.error("El nombre es requerido");
       return;
     }
-    const res = await fetch("/api/admin/categories", {
+    const res = await fetch(api("/api/admin/categories"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -460,7 +461,7 @@ export default function AdminCategoriasPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("\u00bfEliminar esta categor\u00eda?")) return;
-    const res = await fetch(`/api/admin/categories/${id}`, {
+    const res = await fetch(api(`/api/admin/categories/${id}`), {
       method: "DELETE",
     });
     if (res.ok) {
@@ -473,7 +474,7 @@ export default function AdminCategoriasPage() {
 
   const toggleNavbar = async (cat: FlatCategory) => {
     if (cat.parentId) return;
-    const res = await fetch(`/api/admin/categories/${cat.id}`, {
+    const res = await fetch(api(`/api/admin/categories/${cat.id}`), {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

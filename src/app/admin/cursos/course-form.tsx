@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -45,7 +46,7 @@ export default function CourseForm({ initialData }: CourseFormProps) {
     formData.append("files", file);
 
     try {
-      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const res = await fetch(api("/api/upload"), { method: "POST", body: formData });
       const data = await res.json();
       if (data.urls?.[0]) setForm((f) => ({ ...f, image: data.urls[0] }));
     } catch {
@@ -61,11 +62,11 @@ export default function CourseForm({ initialData }: CourseFormProps) {
     setSaving(true);
 
     try {
-      const url = isEditing
+      const path = isEditing
         ? `/api/admin/courses/${initialData!.id}`
         : "/api/admin/courses";
 
-      await fetch(url, {
+      await fetch(api(path), {
         method: isEditing ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

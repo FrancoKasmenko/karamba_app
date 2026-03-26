@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -41,7 +42,7 @@ function TransferContent() {
       setLoading(false);
       return;
     }
-    fetch(`/api/orders/${orderId}/summary`)
+    fetch(api(`/api/orders/${orderId}/summary`))
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setSummary(null);
@@ -58,7 +59,7 @@ function TransferContent() {
     const fd = new FormData();
     fd.append("file", file);
     try {
-      const res = await fetch(`/api/orders/${orderId}/transfer-receipt`, {
+      const res = await fetch(api(`/api/orders/${orderId}/transfer-receipt`), {
         method: "POST",
         body: fd,
       });

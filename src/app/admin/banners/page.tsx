@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -36,7 +37,7 @@ export default function AdminBannersPage() {
   const [uploading, setUploading] = useState(false);
 
   const fetchBanners = async () => {
-    const res = await fetch("/api/admin/banners");
+    const res = await fetch(api("/api/admin/banners"));
     setBanners(await res.json());
     setLoading(false);
   };
@@ -53,7 +54,7 @@ export default function AdminBannersPage() {
     try {
       const fd = new FormData();
       fd.set("file", file);
-      const res = await fetch("/api/admin/banners/upload", {
+      const res = await fetch(api("/api/admin/banners/upload"), {
         method: "POST",
         body: fd,
       });
@@ -79,7 +80,7 @@ export default function AdminBannersPage() {
     }
     try {
       if (editing) {
-        const res = await fetch(`/api/admin/banners/${editing}`, {
+        const res = await fetch(api(`/api/admin/banners/${editing}`), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...form, image: img }),
@@ -91,7 +92,7 @@ export default function AdminBannersPage() {
         }
         toast.success("Banner actualizado");
       } else {
-        const res = await fetch("/api/admin/banners", {
+        const res = await fetch(api("/api/admin/banners"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...form, image: img }),
@@ -114,7 +115,7 @@ export default function AdminBannersPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar este banner?")) return;
-    const res = await fetch(`/api/admin/banners/${id}`, { method: "DELETE" });
+    const res = await fetch(api(`/api/admin/banners/${id}`), { method: "DELETE" });
     if (res.ok) {
       toast.success("Banner eliminado");
       fetchBanners();

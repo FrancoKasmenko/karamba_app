@@ -1,9 +1,11 @@
 "use client";
+import { api } from "@/lib/public-api";
+import { fetchJson, fetchJsonErrorMessage } from "@/lib/fetch-json";
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { FiPlay, FiRadio } from "react-icons/fi";
+import { FiAlertCircle, FiPlay, FiRadio } from "react-icons/fi";
 
 interface YouTubeStatus {
   isLive: boolean;
@@ -16,12 +18,24 @@ interface YouTubeStatus {
 
 export default function YouTubeSection() {
   const [status, setStatus] = useState<YouTubeStatus | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/youtube/status")
-      .then((r) => r.json())
-      .then(setStatus)
-      .catch(() => {});
+    let cancelled = false;
+    void (async () => {
+      const r = await fetchJson<YouTubeStatus>(api("/api/youtube/status"));
+      if (cancelled) return;
+      if (r.ok) {
+        setStatus(r.data);
+        setLoadError(null);
+        return;
+      }
+      setLoadError(fetchJsonErrorMessage(r));
+      setStatus(null);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const videoId = status?.isLive
@@ -74,7 +88,33 @@ export default function YouTubeSection() {
           className="max-w-4xl mx-auto"
         >
           <div className="rounded-2xl overflow-hidden shadow-xl border border-primary-light/30 bg-white">
-            {videoId ? (
+            {loadError ? (
+              <div className="aspect-video flex flex-col items-center justify-center gap-3 px-6 py-8 bg-gradient-to-br from-amber-50/90 to-primary-light/15">
+                <div className="w-14 h-14 rounded-2xl bg-amber-100 flex items-center justify-center text-amber-800">
+                  <FiAlertCircle size={28} />
+                </div>
+                <p className="text-center text-sm font-semibold text-warm-gray max-w-md">
+                  No pudimos cargar el video de YouTube en este momento.
+                </p>
+                <div className="w-full max-w-md rounded-xl border border-amber-200/80 bg-white/90 px-4 py-3 text-left">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-amber-900/80 mb-1">
+                    Detalle
+                  </p>
+                  <p className="text-xs text-gray-600 whitespace-pre-wrap break-words">
+                    {loadError}
+                  </p>
+                </div>
+                <a
+                  href="https://www.youtube.com/@SOMOS-KARAMBA"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 inline-flex items-center gap-2 text-sm font-semibold text-red-600 hover:text-red-700 underline"
+                >
+                  <FiPlay size={14} />
+                  Abrir canal en YouTube
+                </a>
+              </div>
+            ) : videoId ? (
               <div className="aspect-video">
                 <iframe
                   src={`https://www.youtube.com/embed/${videoId}${status?.isLive ? "?autoplay=1" : ""}`}

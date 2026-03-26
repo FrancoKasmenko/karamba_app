@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState, use } from "react";
 import Image from "next/image";
@@ -118,7 +119,7 @@ export default function OrderDetailPage({
   });
 
   const fetchOrder = () => {
-    fetch(`/api/admin/orders/${id}`)
+    fetch(api(`/api/admin/orders/${id}`))
       .then((r) => r.json())
       .then((data) => {
         setOrder(data);
@@ -139,7 +140,7 @@ export default function OrderDetailPage({
 
   const handleStatusChange = async (newStatus: string) => {
     try {
-      const res = await fetch(`/api/admin/orders/${id}`, {
+      const res = await fetch(api(`/api/admin/orders/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
@@ -155,7 +156,7 @@ export default function OrderDetailPage({
   const handleSaveEdit = async () => {
     setSaving(true);
     try {
-      const res = await fetch(`/api/admin/orders/${id}`, {
+      const res = await fetch(api(`/api/admin/orders/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
@@ -179,7 +180,7 @@ export default function OrderDetailPage({
               transferReceiptStatus: "PENDING" as const,
               status: "PENDING" as const,
             };
-      const res = await fetch(`/api/admin/orders/${id}`, {
+      const res = await fetch(api(`/api/admin/orders/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -197,7 +198,7 @@ export default function OrderDetailPage({
   const handleSyncPayment = async () => {
     setSyncing(true);
     try {
-      const res = await fetch(`/api/admin/orders/${id}/sync-payment`, {
+      const res = await fetch(api(`/api/admin/orders/${id}/sync-payment`), {
         method: "POST",
       });
       const data = await res.json();
@@ -222,7 +223,7 @@ export default function OrderDetailPage({
   ) => {
     setResending(type);
     try {
-      const res = await fetch(`/api/admin/orders/${id}/resend-email`, {
+      const res = await fetch(api(`/api/admin/orders/${id}/resend-email`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type }),
@@ -239,7 +240,7 @@ export default function OrderDetailPage({
   const handleDownloadPdf = async () => {
     setDownloadingPdf(true);
     try {
-      const res = await fetch(`/api/orders/${id}/invoice`);
+      const res = await fetch(api(`/api/orders/${id}/invoice`));
       if (!res.ok) throw new Error();
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);

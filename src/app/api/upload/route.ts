@@ -4,6 +4,7 @@ import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { readFormFileBuffer } from "@/lib/read-upload-file";
+import { api } from "@/lib/public-api";
 
 export const runtime = "nodejs";
 
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
         path.extname(name) || (type ? extFromMime(type) : ".png") || ".png";
       const filename = `${randomUUID()}${ext}`;
       const filepath = path.join(uploadDir, filename);
-      const publicUrl = `${REL_DIR}/${filename}`;
+      const publicUrl = api(`${REL_DIR}/${filename}`);
 
       console.log("UPLOAD DEBUG:");
       console.log("Type:", type || "(vacío)");

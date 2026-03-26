@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -52,7 +53,7 @@ export default function AdminUsuarioDetallePage() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    fetch(`/api/admin/users/${id}`)
+    fetch(api(`/api/admin/users/${id}`))
       .then((r) => {
         if (r.status === 404) {
           setUser(null);
@@ -101,7 +102,7 @@ export default function AdminUsuarioDetallePage() {
         body.newPassword = newPassword.trim();
       }
 
-      const res = await fetch(`/api/admin/users/${id}`, {
+      const res = await fetch(api(`/api/admin/users/${id}`), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -125,8 +126,7 @@ export default function AdminUsuarioDetallePage() {
   const handleSendReset = async () => {
     setResetSending(true);
     try {
-      const res = await fetch(
-        `/api/admin/users/${id}/send-password-reset`,
+      const res = await fetch(api(`/api/admin/users/${id}/send-password-reset`),
         { method: "POST" }
       );
       const data = await res.json().catch(() => ({}));
@@ -393,7 +393,7 @@ export default function AdminUsuarioDetallePage() {
                 onClick={async () => {
                   setPromoteBusy(true);
                   try {
-                    const res = await fetch("/api/admin/users/promote", {
+                    const res = await fetch(api("/api/admin/users/promote"), {
                       method: "POST",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({

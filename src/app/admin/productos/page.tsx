@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -23,7 +24,7 @@ export default function AdminProductosPage() {
 
   const fetchProducts = async () => {
     try {
-      const res = await fetch("/api/admin/products");
+      const res = await fetch(api("/api/admin/products"));
       const data = await res.json();
       setProducts(data);
     } catch {
@@ -40,7 +41,7 @@ export default function AdminProductosPage() {
     if (!confirm("¿Estás seguro de eliminar este producto?")) return;
 
     try {
-      await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
+      await fetch(api(`/api/admin/products/${id}`), { method: "DELETE" });
       toast.success("Producto eliminado");
       fetchProducts();
     } catch {

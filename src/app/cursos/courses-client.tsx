@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -34,7 +35,7 @@ export default function CoursesClient() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/courses")
+    fetch(api("/api/courses"))
       .then((r) => r.json())
       .then(setCourses)
       .catch(() => {})

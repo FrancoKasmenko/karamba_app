@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
@@ -132,7 +133,7 @@ export default function ProfileClient({
   const startTwoFASetup = useCallback(async () => {
     setTwoFABusy(true);
     try {
-      const res = await fetch("/api/auth/2fa/setup", {
+      const res = await fetch(api("/api/auth/2fa/setup"), {
         method: "POST",
       });
       const d = await res.json().catch(() => ({}));
@@ -175,7 +176,7 @@ export default function ProfileClient({
   }, [admin2FARequired, twoFASetup]);
 
   useEffect(() => {
-    fetch("/api/profile/digital-downloads")
+    fetch(api("/api/profile/digital-downloads"))
       .then((r) => (r.ok ? r.json() : []))
       .then((data: DigitalDownloadRow[]) =>
         setDownloads(Array.isArray(data) ? data : [])
@@ -191,7 +192,7 @@ export default function ProfileClient({
     }
     setPwdSaving(true);
     try {
-      const res = await fetch("/api/profile/password", {
+      const res = await fetch(api("/api/profile/password"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -217,7 +218,7 @@ export default function ProfileClient({
   const handleSave = async () => {
     setSaving(true);
     try {
-      await fetch("/api/profile", {
+      await fetch(api("/api/profile"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
@@ -474,9 +475,21 @@ export default function ProfileClient({
                 <p className="font-semibold text-amber-900 mb-2">
                   Guardá estos códigos de respaldo (solo se muestran una vez):
                 </p>
+                <p className="text-xs text-amber-900/90 mb-2">
+                  Cada código salvo el <strong>último de la lista</strong> se
+                  invalida al usarlo una vez. El último no se gasta: seguís
+                  pudiendo usarlo cuando lo necesites.
+                </p>
                 <ul className="font-mono text-xs text-amber-950 space-y-1">
-                  {twoFABackupCodes.map((c) => (
-                    <li key={c}>{c}</li>
+                  {twoFABackupCodes.map((c, i) => (
+                    <li key={c}>
+                      {c}
+                      {i === twoFABackupCodes.length - 1 ? (
+                        <span className="ml-2 font-sans font-normal text-amber-800">
+                          (permanente)
+                        </span>
+                      ) : null}
+                    </li>
                   ))}
                 </ul>
                 <button
@@ -542,7 +555,7 @@ export default function ProfileClient({
                     onClick={async () => {
                       setTwoFABusy(true);
                       try {
-                        const res = await fetch("/api/auth/2fa/verify-setup", {
+                        const res = await fetch(api("/api/auth/2fa/verify-setup"), {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
@@ -740,7 +753,7 @@ export default function ProfileClient({
                     </p>
                   </div>
                   <a
-                    href={`/api/products/download?productId=${encodeURIComponent(d.productId)}`}
+                    href={api(`/api/products/download?productId=${encodeURIComponent(d.productId)}`)}
                     className="inline-flex items-center justify-center gap-2 shrink-0 bg-primary text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-95 transition-opacity"
                   >
                     <FiDownload size={16} />

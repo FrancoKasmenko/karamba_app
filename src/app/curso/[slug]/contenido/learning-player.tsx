@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -82,7 +83,7 @@ export default function LearningPlayer({
     }) => {
       setSaving(true);
       try {
-        const res = await fetch("/api/learning/lesson-progress", {
+        const res = await fetch(api("/api/learning/lesson-progress"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

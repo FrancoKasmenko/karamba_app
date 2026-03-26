@@ -3,26 +3,9 @@ import path from "path";
 
 export type BrandLogoKind = "png" | "jpg";
 
-/**
- * Logo para PDFs y facturas.
- * Orden: KARAMBA_LOGO_PATH → public/brand/karamba-logo.png|.jpg → logo.png → certificate-logo.png
- */
-export async function loadKarambaLogoBytes(): Promise<{
-  bytes: Buffer;
-  kind: BrandLogoKind;
-} | null> {
-  const brandDir = path.join(process.cwd(), "public", "brand");
-  const envPath = process.env.KARAMBA_LOGO_PATH?.trim();
-
-  const candidates: string[] = [];
-  if (envPath) candidates.push(envPath);
-  candidates.push(
-    path.join(brandDir, "karamba-logo.png"),
-    path.join(brandDir, "karamba-logo.jpg"),
-    path.join(brandDir, "logo.png"),
-    path.join(brandDir, "certificate-logo.png")
-  );
-
+async function readFirstLogoCandidate(
+  candidates: string[]
+): Promise<{ bytes: Buffer; kind: BrandLogoKind } | null> {
   for (const filePath of candidates) {
     try {
       const bytes = await fs.readFile(filePath);
@@ -48,6 +31,56 @@ export async function loadKarambaLogoBytes(): Promise<{
   }
 
   return null;
+}
+
+/**
+ * Logo para facturas y usos generales.
+ * Orden: KARAMBA_LOGO_PATH → public/brand/* → public/no-image.png
+ */
+export async function loadKarambaLogoBytes(): Promise<{
+  bytes: Buffer;
+  kind: BrandLogoKind;
+} | null> {
+  const publicDir = path.join(process.cwd(), "public");
+  const brandDir = path.join(publicDir, "brand");
+  const envPath = process.env.KARAMBA_LOGO_PATH?.trim();
+
+  const candidates: string[] = [];
+  if (envPath) candidates.push(envPath);
+  candidates.push(
+    path.join(brandDir, "karamba-logo.png"),
+    path.join(brandDir, "karamba-logo.jpg"),
+    path.join(brandDir, "logo.png"),
+    path.join(brandDir, "certificate-logo.png"),
+    path.join(publicDir, "no-image.png")
+  );
+
+  return readFirstLogoCandidate(candidates);
+}
+
+/**
+ * Certificado de curso: prioriza `public/no-image.png` (logo Karamba en web)
+ * antes que archivos sueltos en /brand, para no mostrar solo texto "KARAMBA".
+ */
+export async function loadCertificateLogoBytes(): Promise<{
+  bytes: Buffer;
+  kind: BrandLogoKind;
+} | null> {
+  const publicDir = path.join(process.cwd(), "public");
+  const brandDir = path.join(publicDir, "brand");
+  const envPath = process.env.KARAMBA_LOGO_PATH?.trim();
+
+  const candidates: string[] = [];
+  if (envPath) candidates.push(envPath);
+  candidates.push(path.join(publicDir, "no-image.png"));
+  candidates.push(
+    path.join(brandDir, "karamba-logo.png"),
+    path.join(brandDir, "karamba-logo.jpg"),
+    path.join(brandDir, "logo.png"),
+    path.join(brandDir, "certificate-logo.png")
+  );
+
+  return readFirstLogoCandidate(candidates);
 }
 
 /** Para HTML/Puppeteer (factura). */

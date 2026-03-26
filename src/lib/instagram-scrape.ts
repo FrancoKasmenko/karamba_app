@@ -1,3 +1,5 @@
+import { api } from "@/lib/public-api";
+
 /**
  * Feed público: web_profile_info + parseo HTML + GraphQL por shortcode
  * (GraphQL sin cookie: ahmedrangel/instagram-media-scraper).
@@ -469,7 +471,7 @@ export function parseManualInstagramFeed(raw: unknown): InstagramFeedPost[] {
     const imageRaw = typeof o.image === "string" ? o.image.trim() : "";
     const image =
       imageRaw ||
-      (sc ? `/api/uploads/instagram/${sc}.jpg` : "");
+      (sc ? api(`/api/uploads/instagram/${sc}.jpg`) : "");
     if (!image) return;
     out.push({
       id: `manual-${i}`,

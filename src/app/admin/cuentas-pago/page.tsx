@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import Button from "@/components/ui/button";
@@ -39,7 +40,7 @@ export default function CuentasPagoPage() {
   });
 
   const load = () => {
-    fetch("/api/admin/payment-accounts")
+    fetch(api("/api/admin/payment-accounts"))
       .then((r) => r.json())
       .then(setRows)
       .finally(() => setLoading(false));
@@ -84,7 +85,7 @@ export default function CuentasPagoPage() {
     }
     try {
       if (editing === "new") {
-        const res = await fetch("/api/admin/payment-accounts", {
+        const res = await fetch(api("/api/admin/payment-accounts"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
@@ -92,7 +93,7 @@ export default function CuentasPagoPage() {
         if (!res.ok) throw new Error();
         toast.success("Cuenta creada");
       } else if (editing) {
-        const res = await fetch(`/api/admin/payment-accounts/${editing}`, {
+        const res = await fetch(api(`/api/admin/payment-accounts/${editing}`), {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(form),
@@ -109,7 +110,7 @@ export default function CuentasPagoPage() {
 
   const remove = async (id: string) => {
     if (!confirm("¿Eliminar esta cuenta?")) return;
-    const res = await fetch(`/api/admin/payment-accounts/${id}`, {
+    const res = await fetch(api(`/api/admin/payment-accounts/${id}`), {
       method: "DELETE",
     });
     if (res.ok) {

@@ -1,4 +1,6 @@
 "use client";
+import { api } from "@/lib/public-api";
+import { fetchJson } from "@/lib/fetch-json";
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -33,10 +35,14 @@ export default function PodcastContent() {
   const [status, setStatus] = useState<YouTubeStatus | null>(null);
 
   useEffect(() => {
-    fetch("/api/youtube/status")
-      .then((r) => r.json())
-      .then(setStatus)
-      .catch(() => {});
+    let cancelled = false;
+    void fetchJson<YouTubeStatus>(api("/api/youtube/status")).then((r) => {
+      if (cancelled) return;
+      if (r.ok) setStatus(r.data);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const videoId = status?.isLive

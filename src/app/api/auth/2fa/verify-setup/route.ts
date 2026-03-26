@@ -87,6 +87,6 @@ export async function POST(req: Request) {
     ok: true,
     backupCodes: plainCodes,
     message:
-      "Guardá estos códigos de respaldo en un lugar seguro. Solo se muestran una vez.",
+      "Guardá estos códigos en un lugar seguro (solo se muestran una vez). Todos salvo el último son de un solo uso; el último de la lista queda siempre activo.",
   });
 }

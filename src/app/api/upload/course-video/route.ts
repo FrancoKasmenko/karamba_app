@@ -4,6 +4,7 @@ import { mkdirSync, writeFileSync } from "fs";
 import path from "path";
 import { randomUUID } from "crypto";
 import { readFormFileBuffer } from "@/lib/read-upload-file";
+import { api } from "@/lib/public-api";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -76,7 +77,7 @@ export async function POST(req: Request) {
 
     writeFileSync(filepath, buffer);
 
-    return NextResponse.json({ url: `${REL_PREFIX}${filename}` });
+    return NextResponse.json({ url: api(`${REL_PREFIX}${filename}`) });
   } catch (err) {
     console.error("Course video upload error:", err);
     return NextResponse.json(

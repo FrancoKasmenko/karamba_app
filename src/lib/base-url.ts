@@ -1,11 +1,22 @@
+/**
+ * Origen del sitio (protocolo + host, sin path) para armar enlaces en correos y MP.
+ * Si NEXTAUTH_URL incluye path (ej. `…/_k/auth`), se ignora el path.
+ */
 export function getBaseUrl(): string {
-  if (process.env.BASE_URL)
-    return process.env.BASE_URL.replace(/\/$/, "");
-  if (process.env.NEXT_PUBLIC_SITE_URL)
-    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
-  if (process.env.NEXTAUTH_URL)
-    return process.env.NEXTAUTH_URL.replace(/\/$/, "");
-  return "http://localhost:3000";
+  const raw = (
+    process.env.BASE_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXTAUTH_URL ||
+    ""
+  ).trim();
+  if (!raw) return "http://localhost:3000";
+  const withScheme = raw.includes("://") ? raw : `https://${raw}`;
+  try {
+    const u = new URL(withScheme);
+    return u.origin;
+  } catch {
+    return raw.replace(/\/$/, "");
+  }
 }
 
 function isLocalHostname(host: string): boolean {

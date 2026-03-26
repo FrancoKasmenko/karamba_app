@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
@@ -130,7 +131,7 @@ export default function CheckoutPage() {
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    fetch("/api/payment-accounts")
+    fetch(api("/api/payment-accounts"))
       .then((r) => r.json())
       .then((d: PayAccount[]) => setAccounts(Array.isArray(d) ? d : []))
       .catch(() => setAccounts([]));
@@ -145,9 +146,7 @@ export default function CheckoutPage() {
     }
     let cancelled = false;
     setCartMetaLoading(true);
-    fetch(
-      `/api/products/checkout-meta?ids=${encodeURIComponent(cartProductIdsKey)}`
-    )
+    fetch(api(`/api/products/checkout-meta?ids=${encodeURIComponent(cartProductIdsKey)}`))
       .then((r) => r.json())
       .then(
         (d: {
@@ -224,7 +223,7 @@ export default function CheckoutPage() {
     }
     setCouponBusy(true);
     try {
-      const res = await fetch("/api/checkout/validate-coupon", {
+      const res = await fetch(api("/api/checkout/validate-coupon"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -359,7 +358,7 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/checkout", {
+      const res = await fetch(api("/api/checkout"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,4 +1,6 @@
 "use client";
+import { api } from "@/lib/public-api";
+import { fetchJson } from "@/lib/fetch-json";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -34,10 +36,12 @@ function LiveBadge() {
   const [isLive, setIsLive] = useState(false);
 
   const checkLive = useCallback(() => {
-    fetch("/api/youtube/status")
-      .then((r) => r.json())
-      .then((d) => setIsLive(d.isLive === true))
-      .catch(() => setIsLive(false));
+    void fetchJson<{ isLive?: boolean }>(api("/api/youtube/status")).then(
+      (r) => {
+        if (r.ok) setIsLive(r.data.isLive === true);
+        else setIsLive(false);
+      }
+    );
   }, []);
 
   useEffect(() => {
@@ -88,7 +92,7 @@ export default function Navbar() {
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
-    fetch("/api/categories")
+    fetch(api("/api/categories"))
       .then((r) => r.json())
       .then((d) => setCategories(d))
       .catch(() => {});

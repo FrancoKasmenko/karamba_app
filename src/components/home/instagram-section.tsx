@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -32,7 +33,7 @@ function imageSrcForPost(image: string): string {
     const u = new URL(t);
     const h = u.hostname.toLowerCase();
     if (h.endsWith(".cdninstagram.com") || h.endsWith(".fbcdn.net")) {
-      return `/api/instagram/image?url=${encodeURIComponent(t)}`;
+      return api(`/api/instagram/image?url=${encodeURIComponent(t)}`);
     }
   } catch {
     return t;
@@ -118,7 +119,7 @@ export default function InstagramSection() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/instagram/feed")
+    fetch(api("/api/instagram/feed"))
       .then(async (r) => {
         const json = (await r.json()) as FeedResponse;
         if (!cancelled) {

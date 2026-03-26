@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -74,7 +75,7 @@ export default function SiteModals() {
   const [current, setCurrent] = useState<ModalRow | null>(null);
 
   useEffect(() => {
-    fetch("/api/site-modals")
+    fetch(api("/api/site-modals"))
       .then((r) => r.json())
       .then((d: unknown) => {
         if (!Array.isArray(d)) return;

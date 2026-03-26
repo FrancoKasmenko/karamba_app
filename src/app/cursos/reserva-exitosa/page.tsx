@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { Suspense, useEffect, useRef } from "react";
 import { useSearchParams } from "next/navigation";
@@ -29,7 +30,7 @@ function SuccessContent() {
     if (confirmSent.current) return;
     confirmSent.current = true;
 
-    fetch("/api/payments/mercadopago-confirm", {
+    fetch(api("/api/payments/mercadopago-confirm"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orderId, paymentId }),

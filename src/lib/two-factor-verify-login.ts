@@ -1,7 +1,10 @@
 import { verifySync } from "otplib";
 import { prisma } from "@/lib/prisma";
 import { decryptTotpSecret } from "@/lib/two-factor-crypto";
-import { tryConsumeBackupCode } from "@/lib/two-factor-backup";
+import {
+  isPermanentBackupCodeIndex,
+  tryConsumeBackupCode,
+} from "@/lib/two-factor-backup";
 import { normalizeTwoFactorCodePayload } from "@/lib/two-factor-code-normalize";
 
 const TOTP_WINDOW_SEC = 30;
@@ -67,7 +70,8 @@ export async function verifyAdminSecondFactor(
 }
 
 /**
- * Tras login 2FA exitoso con código de respaldo, elimina ese hash.
+ * Tras usar un código de respaldo de un solo uso, elimina su hash.
+ * El **último** código del lote (el que queda al final del array) no se elimina nunca.
  */
 export async function removeUsedBackupCode(
   userId: string,
@@ -78,9 +82,11 @@ export async function removeUsedBackupCode(
     select: { twoFactorBackupCodes: true },
   });
   if (!user) return;
-  const next = user.twoFactorBackupCodes.filter(
-    (_h: string, i: number) => i !== index
-  );
+  const { twoFactorBackupCodes: codes } = user;
+  if (isPermanentBackupCodeIndex(index, codes.length)) {
+    return;
+  }
+  const next = codes.filter((_h: string, i: number) => i !== index);
   await prisma.user.update({
     where: { id: userId },
     data: { twoFactorBackupCodes: next },

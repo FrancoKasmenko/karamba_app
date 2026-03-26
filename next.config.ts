@@ -31,6 +31,9 @@ if (isProd) {
 }
 
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return [{ source: "/_k/:path*", destination: "/api/:path*" }];
+  },
   async headers() {
     return [
       {

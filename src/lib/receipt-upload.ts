@@ -1,6 +1,7 @@
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
+import { api } from "@/lib/public-api";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED = new Set([
@@ -62,5 +63,5 @@ export async function saveTransferReceipt(
   const filename = `${orderId}-${Date.now()}${ext}`;
   const full = path.join(dir, filename);
   await writeFile(full, buffer);
-  return `/api/uploads/transfer-receipts/${filename}`;
+  return api(`/api/uploads/transfer-receipts/${filename}`);
 }

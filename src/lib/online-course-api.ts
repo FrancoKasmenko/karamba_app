@@ -58,6 +58,7 @@ export function isLessonUploadVideoUrl(url: string | null | undefined): boolean 
   if (!u) return false;
   return (
     u.startsWith(LESSON_UPLOAD_VIDEO_PREFIX) ||
+    u.startsWith("/_k/uploads/course-videos/") ||
     u.startsWith(LEGACY_LESSON_VIDEO_PREFIX)
   );
 }
@@ -87,6 +88,10 @@ export function sanitizeLessonVideoFile(
   if (!p) return null;
   if (p.includes("..") || p.includes("\\")) return null;
   if (p.startsWith(LESSON_UPLOAD_VIDEO_PREFIX)) return p;
+  const publicK = "/_k/uploads/course-videos/";
+  if (p.startsWith(publicK)) {
+    return `${LESSON_UPLOAD_VIDEO_PREFIX}${p.slice(publicK.length)}`;
+  }
   if (p.startsWith(LEGACY_LESSON_VIDEO_PREFIX)) {
     return `${LESSON_UPLOAD_VIDEO_PREFIX}${p.slice(LEGACY_LESSON_VIDEO_PREFIX.length)}`;
   }

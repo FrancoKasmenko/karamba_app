@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useState } from "react";
 import toast from "react-hot-toast";
@@ -22,7 +23,7 @@ export default function GrantOnlineAccessCard({
     }
     setBusy(true);
     try {
-      const res = await fetch(`/api/admin/online-courses/${courseId}/grant-access`, {
+      const res = await fetch(api(`/api/admin/online-courses/${courseId}/grant-access`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: em }),

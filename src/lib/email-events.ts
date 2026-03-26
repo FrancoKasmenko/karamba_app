@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import { getBaseUrl } from "@/lib/base-url";
+import { api } from "@/lib/public-api";
 import { formatPrice } from "@/lib/utils";
 import {
   emailBadge,
@@ -24,7 +25,7 @@ export const EmailEventType = {
 } as const;
 
 function certUrl(courseId: string): string {
-  return `${getBaseUrl()}/api/courses/certificate/${courseId}`;
+  return `${getBaseUrl()}${api(`/api/courses/certificate/${courseId}`)}`;
 }
 
 function orderShortId(orderId: string): string {

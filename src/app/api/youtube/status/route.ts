@@ -11,6 +11,8 @@ interface YouTubeStatus {
 
 const CHANNEL_URL = "https://www.youtube.com/@SOMOS-KARAMBA";
 const DEFAULT_HANDLE = "SOMOS-KARAMBA";
+/** @SOMOS-KARAMBA — fallback si el scrape del HTML falla (p. ej. VPS / IP de datacenter). */
+const DEFAULT_KARAMBA_CHANNEL_ID = "UCsKwPGC_EJXKUws7tR5gpqA";
 const CACHE_TTL = 180_000;
 
 let cache: { data: YouTubeStatus; ts: number } | null = null;
@@ -68,7 +70,8 @@ async function resolveChannelId(): Promise<string | null> {
     const m =
       html.match(/"channelId":"(UC[\w-]{22})"/) ||
       html.match(/"externalId":"(UC[\w-]{22})"/) ||
-      html.match(/browseId":"(UC[\w-]{22})"/);
+      html.match(/"browseId":"(UC[\w-]{22})"/) ||
+      html.match(/\/channel\/(UC[\w-]{22})/);
     const id = m?.[1] ?? null;
     if (id) {
       resolvedChannelIdFromHandle = id;
@@ -89,6 +92,11 @@ async function fetchLatestFromRss(channelId: string): Promise<{
 } | null> {
   const url = `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(channelId)}`;
   const res = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (compatible; KarambaSite/1.0; +https://karamba.com.uy)",
+      Accept: "application/atom+xml,application/xml;q=0.9,*/*;q=0.8",
+    },
     signal: AbortSignal.timeout(12_000),
     next: { revalidate: 120 },
   });
@@ -161,18 +169,18 @@ export async function GET() {
     return NextResponse.json(cache.data);
   }
 
-  const channelId = await resolveChannelId();
+  let channelId = await resolveChannelId();
+  if (!channelId) {
+    console.warn(
+      "[YouTube] Scrape/env sin channel ID; usando fallback @SOMOS-KARAMBA (RSS/API)."
+    );
+    channelId = DEFAULT_KARAMBA_CHANNEL_ID;
+  }
+
   const base: YouTubeStatus = {
     ...emptyStatus(),
     channelUrl: CHANNEL_URL,
   };
-
-  if (!channelId) {
-    console.warn(
-      "[YouTube] No se pudo resolver el channel ID (YOUTUBE_CHANNEL_ID o handle en página)"
-    );
-    return NextResponse.json(base);
-  }
 
   let isLive = false;
   let liveVideoId: string | null = null;

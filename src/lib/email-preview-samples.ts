@@ -1,4 +1,5 @@
 import { getBaseUrl } from "@/lib/base-url";
+import { api } from "@/lib/public-api";
 import { formatPrice } from "@/lib/utils";
 import {
   emailBadge,
@@ -40,7 +41,7 @@ export function getEmailPreviewSamples(
   const resetUrl = `${base}/login/restablecer-contrasena?token=EJEMPLO_TOKEN`;
   const transferPage = `${base}/checkout/transferencia?orderId=${SAMPLE_ORDER_ID}`;
   const cursoUrl = `${base}/curso/${SAMPLE_COURSE_SLUG}/contenido`;
-  const certUrl = `${base}/api/courses/certificate/ejemplo-curso-id`;
+  const certUrl = `${base}${api("/api/courses/certificate/ejemplo-curso-id")}`;
 
   const line1 = `<tr>
     <td style="padding:12px 0;border-bottom:1px solid #fce7f3;font-size:14px;color:#4b5563;">Cuaderno A5 tapa dura <span style="color:#9ca3af;">× 2</span></td>

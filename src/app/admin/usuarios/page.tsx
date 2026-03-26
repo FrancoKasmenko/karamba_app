@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -19,7 +20,7 @@ export default function AdminUsuariosPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/admin/users")
+    fetch(api("/api/admin/users"))
       .then((r) => r.json())
       .then((d) => {
         setUsers(Array.isArray(d) ? d : []);

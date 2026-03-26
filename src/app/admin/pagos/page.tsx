@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -35,7 +36,7 @@ export default function AdminPagosPage() {
   const [webhookUrl, setWebhookUrl] = useState("");
 
   useEffect(() => {
-    fetch("/api/admin/settings")
+    fetch(api("/api/admin/settings"))
       .then(async (r) => {
         const data = await r.json();
         if (!r.ok) {
@@ -56,7 +57,7 @@ export default function AdminPagosPage() {
         setLoading(false);
       });
 
-    fetch("/api/webhook-url")
+    fetch(api("/api/webhook-url"))
       .then((r) => r.json())
       .then((data) => setWebhookUrl(data.webhookUrl || ""))
       .catch(() => {});
@@ -76,7 +77,7 @@ export default function AdminPagosPage() {
         payload.mercadoPagoAccessToken = trimmedToken;
       }
 
-      const res = await fetch("/api/admin/settings", {
+      const res = await fetch(api("/api/admin/settings"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

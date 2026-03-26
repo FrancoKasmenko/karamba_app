@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -27,7 +28,7 @@ export default function ContactoPage() {
     if (submitting) return;
     setSubmitting(true);
     try {
-      const res = await fetch("/api/contact", {
+      const res = await fetch(api("/api/contact"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,4 +1,6 @@
 "use client";
+import { api } from "@/lib/public-api";
+import { fetchJsonErrorMessage, parseFetchJson } from "@/lib/fetch-json";
 
 import { useState } from "react";
 import Button from "@/components/ui/button";
@@ -17,12 +19,14 @@ export default function CourseCertificateButton({
   const download = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/courses/certificate/${courseId}`, {
+      const res = await fetch(api(`/api/courses/certificate/${courseId}`), {
         credentials: "include",
       });
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        toast.error(data.error || "No se pudo descargar");
+        const parsed = await parseFetchJson<{ error?: string }>(res);
+        toast.error(
+          !parsed.ok ? fetchJsonErrorMessage(parsed) : "No se pudo descargar"
+        );
         setLoading(false);
         return;
       }

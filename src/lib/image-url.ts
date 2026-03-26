@@ -1,3 +1,4 @@
+import { api } from "@/lib/public-api";
 /** Fallback local si no hay imagen válida (colocar en /public/no-image.png). */
 export const NO_PRODUCT_IMAGE = "/no-image.png";
 
@@ -10,6 +11,7 @@ export function isLocalUploadPath(src: string): boolean {
   if (!t) return false;
   return (
     t.startsWith("/api/uploads/") ||
+    t.startsWith("/_k/uploads/") ||
     t.startsWith("/uploads/") ||
     t.startsWith("uploads/")
   );
@@ -56,7 +58,7 @@ function normalizeApiUploadsRest(rest: string): string {
 
 /**
  * Resuelve ruta local o URL externa (excepto placehold).
- * Salida siempre bajo `/api/uploads/…`. Entrada `/uploads/…` solo normaliza BD antigua.
+ * Salida pública `/_k/uploads/…` (rewrite → `/api/uploads/…`). Entrada `/uploads/…` solo normaliza BD antigua.
  * Nombre suelto → /api/uploads/products/nombre
  */
 export function resolveMediaPath(s: string): string {
@@ -67,17 +69,21 @@ export function resolveMediaPath(s: string): string {
   let p = t.startsWith("/") ? t : `/${t}`;
   p = p.replace(/\/+/g, "/");
 
+  if (p.startsWith("/_k/uploads/")) {
+    const rest = normalizeApiUploadsRest(p.slice("/_k/uploads/".length));
+    return api(`/api/uploads/${rest}`);
+  }
   if (p.startsWith("/api/uploads/")) {
     const rest = normalizeApiUploadsRest(p.slice("/api/uploads/".length));
-    return `/api/uploads/${rest}`;
+    return api(`/api/uploads/${rest}`);
   }
   if (p.startsWith("/uploads/")) {
     const rest = normalizeApiUploadsRest(p.slice("/uploads/".length));
-    return `/api/uploads/${rest}`;
+    return api(`/api/uploads/${rest}`);
   }
   if (p.startsWith("/img/") || p === NO_PRODUCT_IMAGE) return p;
   if (/^\/[^/]+$/.test(p)) {
-    return `/api/uploads/products/${p.slice(1)}`;
+    return api(`/api/uploads/products/${p.slice(1)}`);
   }
   return p;
 }

@@ -3,6 +3,7 @@ import path from "path";
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
+import { api } from "@/lib/public-api";
 
 export const runtime = "nodejs";
 
@@ -45,7 +46,7 @@ export async function POST(req: Request) {
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, name), buf);
 
-    const url = `/api/uploads/banners/${name}`;
+    const url = api(`/api/uploads/banners/${name}`);
     return NextResponse.json({ url });
   } catch (e) {
     console.error("[banner upload]", e);

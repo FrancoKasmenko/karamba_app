@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState, use } from "react";
 import ProductForm from "../product-form";
@@ -13,7 +14,7 @@ export default function EditProductoPage({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`/api/admin/products/${id}`)
+    fetch(api(`/api/admin/products/${id}`))
       .then((res) => res.json())
       .then((data) => {
         setProduct(data);

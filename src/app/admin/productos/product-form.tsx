@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -111,7 +112,7 @@ export default function ProductForm({
   const isEdit = !!initialData?.id;
 
   useEffect(() => {
-    fetch("/api/admin/categories")
+    fetch(api("/api/admin/categories"))
       .then((r) => r.json())
       .then((data) => setCategories(data))
       .catch(() => {});
@@ -126,11 +127,11 @@ export default function ProductForm({
     setLoading(true);
 
     try {
-      const url = isEdit
+      const path = isEdit
         ? `/api/admin/products/${initialData!.id}`
         : "/api/admin/products";
 
-      const res = await fetch(url, {
+      const res = await fetch(api(path), {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -168,7 +169,7 @@ export default function ProductForm({
     }
 
     try {
-      const res = await fetch("/api/upload", {
+      const res = await fetch(api("/api/upload"), {
         method: "POST",
         body: formData,
       });
@@ -204,7 +205,7 @@ export default function ProductForm({
     const fd = new FormData();
     fd.append("file", file);
     try {
-      const res = await fetch("/api/admin/upload-digital", {
+      const res = await fetch(api("/api/admin/upload-digital"), {
         method: "POST",
         body: fd,
       });

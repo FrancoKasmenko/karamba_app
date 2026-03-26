@@ -6,7 +6,10 @@ import { checkLoginRateLimit } from "@/lib/login-rate-limit";
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
-  if (pathname === "/api/auth/callback/credentials") {
+  if (
+    pathname === "/api/auth/callback/credentials" ||
+    pathname === "/_k/auth/callback/credentials"
+  ) {
     if (req.method === "POST") {
       const xf = req.headers.get("x-forwarded-for");
       const ip =
@@ -67,6 +70,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     "/api/auth/callback/credentials",
+    "/_k/auth/callback/credentials",
     "/admin/:path*",
     "/perfil/:path*",
     "/checkout/:path*",

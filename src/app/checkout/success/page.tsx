@@ -1,5 +1,6 @@
 "use client";
 
+import { api } from "@/lib/public-api";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -52,7 +53,7 @@ function SuccessContent() {
     if (confirmSent.current) return;
     confirmSent.current = true;
 
-    fetch("/api/payments/mercadopago-confirm", {
+    fetch(api("/api/payments/mercadopago-confirm"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orderId, paymentId }),
@@ -69,7 +70,7 @@ function SuccessContent() {
     }
     let cancelled = false;
     setDigitalLoading(true);
-    fetch(`/api/orders/${orderId}/digital-summary`)
+    fetch(api(`/api/orders/${orderId}/digital-summary`))
       .then((r) => (r.ok ? r.json() : { digital: [] }))
       .then(
         (data: {
@@ -225,7 +226,7 @@ function SuccessContent() {
                     </div>
                     {row.canDownload ? (
                       <a
-                        href={`/api/products/download?productId=${encodeURIComponent(row.productId)}`}
+                        href={api(`/api/products/download?productId=${encodeURIComponent(row.productId)}`)}
                         className="inline-flex items-center justify-center gap-2 shrink-0 rounded-full bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 hover:bg-violet-700 transition-colors"
                       >
                         <FiDownload size={16} />

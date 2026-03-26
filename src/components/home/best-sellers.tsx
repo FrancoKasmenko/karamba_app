@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
@@ -20,7 +21,7 @@ export default function BestSellers() {
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    fetch("/api/products/best-sellers")
+    fetch(api("/api/products/best-sellers"))
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data) && data.length > 0) setProducts(data);

@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -39,7 +40,7 @@ function Login2FAInner() {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/2fa/login", {
+      const res = await fetch(api("/api/auth/2fa/login"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: payload }),

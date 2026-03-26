@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import type { ComponentType } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -101,7 +102,7 @@ export default function DashboardClient() {
     setLoading(true);
     setErr(null);
     try {
-      const r = await fetch(`/api/admin/dashboard-stats?${qs}`);
+      const r = await fetch(api(`/api/admin/dashboard-stats?${qs}`));
       if (!r.ok) throw new Error("No se pudieron cargar las métricas");
       setData(await r.json());
     } catch (e) {

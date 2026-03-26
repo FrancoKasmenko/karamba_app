@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/public-api";
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -95,7 +96,7 @@ export default function OnlineCourseForm({
     try {
       const fd = new FormData();
       fd.append("files", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
+      const res = await fetch(api("/api/upload"), { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) {
         toast.error(data.error || "Error al subir la portada");
@@ -140,7 +141,7 @@ export default function OnlineCourseForm({
     try {
       const fd = new FormData();
       fd.append("file", file);
-      const res = await fetch("/api/upload/course-video", {
+      const res = await fetch(api("/api/upload/course-video"), {
         method: "POST",
         body: fd,
       });
@@ -181,7 +182,7 @@ export default function OnlineCourseForm({
     }
     setLoading(true);
     try {
-      const url = isEdit
+      const path = isEdit
         ? `/api/admin/online-courses/${initial.id}`
         : "/api/admin/online-courses";
       const body = {
@@ -217,7 +218,7 @@ export default function OnlineCourseForm({
         })),
       };
 
-      const res = await fetch(url, {
+      const res = await fetch(api(path), {
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),

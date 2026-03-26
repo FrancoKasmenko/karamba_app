@@ -2,6 +2,7 @@ node_modules/
 .next/
 .env
 .env.local
+database.sql
 *.tsbuildinfo
 next-env.d.ts
 public/uploads/transfer-receipts/*

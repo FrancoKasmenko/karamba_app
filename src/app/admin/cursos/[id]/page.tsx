@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import toast from "react-hot-toast";
 import CourseForm from "../course-form";
 import {
   FiPlus,
@@ -69,6 +70,12 @@ export default function EditCoursePage() {
   });
   const [addingSession, setAddingSession] = useState(false);
   const [showSessionForm, setShowSessionForm] = useState(false);
+  const [manualEmailBySession, setManualEmailBySession] = useState<
+    Record<string, string>
+  >({});
+  const [manualBookingBusy, setManualBookingBusy] = useState<string | null>(
+    null
+  );
 
   const fetchCourse = () => {
     fetch(`/api/admin/courses/${params.id}`)
@@ -115,6 +122,41 @@ export default function EditCoursePage() {
       body: JSON.stringify({ status }),
     });
     fetchCourse();
+  };
+
+  const handleManualBooking = async (sessionId: string) => {
+    const email = manualEmailBySession[sessionId]?.trim().toLowerCase();
+    if (!email) {
+      toast.error("Ingresá el email de la cuenta de la alumna");
+      return;
+    }
+    setManualBookingBusy(sessionId);
+    try {
+      const res = await fetch(
+        `/api/admin/course-sessions/${sessionId}/manual-booking`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "No se pudo agendar");
+        return;
+      }
+      if (data.already) {
+        toast.success("Esa alumna ya estaba inscripta como pagada");
+      } else {
+        toast.success("Alumna agendada en la sesión");
+      }
+      setManualEmailBySession((prev) => ({ ...prev, [sessionId]: "" }));
+      fetchCourse();
+    } catch {
+      toast.error("Error de red");
+    } finally {
+      setManualBookingBusy(null);
+    }
   };
 
   if (loading) {
@@ -317,6 +359,35 @@ export default function EditCoursePage() {
                           <FiTrash2 size={12} />
                           Eliminar sesión
                         </button>
+                      </div>
+
+                      <div className="mb-4 p-3 rounded-xl bg-primary-light/15 border border-primary-light/30">
+                        <p className="text-xs font-semibold text-gray-600 mb-2">
+                          Agendar manualmente (la alumna debe tener cuenta en el sitio)
+                        </p>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <input
+                            type="email"
+                            placeholder="email@ejemplo.com"
+                            value={manualEmailBySession[s.id] || ""}
+                            onChange={(e) =>
+                              setManualEmailBySession((prev) => ({
+                                ...prev,
+                                [s.id]: e.target.value,
+                              }))
+                            }
+                            className="flex-1 px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-primary bg-white"
+                            disabled={manualBookingBusy === s.id}
+                          />
+                          <button
+                            type="button"
+                            disabled={manualBookingBusy === s.id}
+                            onClick={() => void handleManualBooking(s.id)}
+                            className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary-dark disabled:opacity-50 transition-colors shrink-0"
+                          >
+                            {manualBookingBusy === s.id ? "…" : "Agendar"}
+                          </button>
+                        </div>
                       </div>
 
                       {s.bookings.length === 0 ? (

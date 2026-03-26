@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { signIn, useSession } from "next-auth/react";
+import { signIn, useSession, getSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -39,6 +39,17 @@ function LoginPageInner() {
     }
 
     await updateSession();
+    const s = await getSession();
+    if (s?.user?.twoFAPending) {
+      setLoading(false);
+      const cb = safeNextPath(searchParams.get("callbackUrl"));
+      router.push(
+        `/login/2fa?callbackUrl=${encodeURIComponent(cb)}`
+      );
+      router.refresh();
+      return;
+    }
+
     setLoading(false);
     toast.success("\u00a1Bienvenido/a!");
     router.push(safeNextPath(searchParams.get("callbackUrl")));

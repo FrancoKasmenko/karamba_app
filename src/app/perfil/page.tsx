@@ -4,9 +4,21 @@ import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import ProfileClient from "./profile-client";
 
-export default async function PerfilPage() {
+type PageProps = {
+  searchParams: Promise<{ admin2fa?: string }>;
+};
+
+export default async function PerfilPage({ searchParams }: PageProps) {
   const session = await getServerSession(authOptions);
   if (!session?.user) redirect("/login");
+
+  const sp = await searchParams;
+  const raw = sp.admin2fa;
+  const admin2FARequired =
+    raw === "1" ||
+    raw === "true" ||
+    raw === "" ||
+    (typeof raw === "string" && raw.toLowerCase() === "yes");
 
   let user = null;
   let orders: unknown[] = [];
@@ -22,6 +34,7 @@ export default async function PerfilPage() {
         phone: true,
         address: true,
         city: true,
+        twoFactorEnabled: true,
       },
     });
 
@@ -62,6 +75,7 @@ export default async function PerfilPage() {
       user={user}
       orders={JSON.parse(JSON.stringify(orders))}
       bookings={JSON.parse(JSON.stringify(bookings))}
+      admin2FARequired={admin2FARequired}
     />
   );
 }

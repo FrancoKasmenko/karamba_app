@@ -42,6 +42,25 @@ enum TransferReceiptStatus {
   VALIDATED
 }
 
+enum CouponDiscountType {
+  PERCENT
+  FIXED_AMOUNT
+}
+
+enum SiteModalFrequency {
+  /// Cada visita al sitio (sesión del navegador): se vuelve a mostrar al abrir una pestaña nueva hasta cerrar el navegador
+  EVERY_SESSION
+  /// Una sola vez por navegador (localStorage) hasta borrar datos
+  ONCE_PER_BROWSER
+  /// Tras cerrar, volver a mostrar pasados N días
+  AGAIN_AFTER_DAYS
+}
+
+enum SiteModalLayout {
+  IMAGE_TEXT
+  TEXT_LOGO
+}
+
 model PaymentAccount {
   id            String   @id @default(cuid())
   holderName    String
@@ -66,6 +85,12 @@ model User {
   address        String?
   city           String?
   role           Role      @default(USER)
+  /// TOTP (Google/Microsoft Authenticator) — solo exigido en login si role ADMIN y está activo
+  twoFactorEnabled     Boolean  @default(false)
+  /// Secreto base32 cifrado (AES-256-GCM), ver lib/two-factor-crypto
+  twoFactorSecret      String?
+  /// Hashes bcrypt de códigos de respaldo (mostrar una sola vez al activar)
+  twoFactorBackupCodes String[] @default([])
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   orders         Order[]
@@ -173,6 +198,9 @@ model Order {
   shippingCity           String?
   shippingPhone          String?
   notes                  String?
+  couponCode             String?
+  couponDiscount         Float                   @default(0)
+  couponRedemptionRecorded Boolean               @default(false)
   createdAt              DateTime                @default(now())
   updatedAt              DateTime                @updatedAt
   courseBooking          CourseBooking?
@@ -182,6 +210,52 @@ model Order {
   @@index([paymentId])
   @@index([source])
   @@index([transferAccountId])
+  @@index([couponCode])
+}
+
+model Coupon {
+  id               String             @id @default(cuid())
+  code             String             @unique
+  description      String?
+  active           Boolean            @default(true)
+  discountType     CouponDiscountType
+  /// 0–100 si discountType = PERCENT
+  percentOff       Float?
+  /// Monto fijo en moneda del sitio si discountType = FIXED_AMOUNT
+  amountOff        Float?
+  validFrom        DateTime?
+  validUntil       DateTime?
+  maxRedemptions   Int?
+  redemptionCount  Int                @default(0)
+  excludeOnSale    Boolean            @default(false)
+  transferOnly     Boolean            @default(false)
+  /// Vacío = todas las categorías; si no, el producto debe estar en la categoría o en un descendiente
+  categoryIds      String[]           @default([])
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([active])
+}
+
+model SiteModal {
+  id               String             @id @default(cuid())
+  name             String
+  active           Boolean            @default(true)
+  frequency        SiteModalFrequency @default(ONCE_PER_BROWSER)
+  /// Solo para AGAIN_AFTER_DAYS
+  showAgainAfterDays Int?
+  layout           SiteModalLayout    @default(TEXT_LOGO)
+  title            String?
+  body             String?            @db.Text
+  imageUrl         String?
+  ctaLabel         String?
+  ctaHref          String?
+  dismissLabel     String             @default("Cerrar")
+  sortOrder        Int                @default(0)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([active, sortOrder])
 }
 
 model OrderItem {

@@ -6,6 +6,7 @@ import {
   syncOnlineCourseAccessFromOrder,
 } from "@/lib/order-course-sync";
 import { handleOrderStatusChangeEmails } from "@/lib/email-events";
+import { recordCouponRedemptionIfNeeded } from "@/lib/coupon-checkout";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -122,6 +123,8 @@ export async function PUT(req: Request, context: RouteContext) {
         order.status
       );
     }
+
+    await recordCouponRedemptionIfNeeded(order.id);
 
     return NextResponse.json(order);
   } catch {

@@ -15,11 +15,42 @@ interface Variant {
   stock?: number;
 }
 
-interface CategoryOption {
+/** Lista plana desde GET /api/admin/categories (sin children anidados). */
+interface CategoryRow {
   id: string;
   name: string;
   parentId: string | null;
-  children: { id: string; name: string }[];
+}
+
+function buildCategorySelectOptions(rows: CategoryRow[]): {
+  id: string;
+  label: string;
+}[] {
+  const byParent = new Map<string | null, CategoryRow[]>();
+  for (const r of rows) {
+    const k = r.parentId ?? null;
+    if (!byParent.has(k)) byParent.set(k, []);
+    byParent.get(k)!.push(r);
+  }
+  for (const arr of byParent.values()) {
+    arr.sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }
+  const out: { id: string; label: string }[] = [];
+  const walk = (parentId: string | null, depth: number) => {
+    const kids = byParent.get(parentId) ?? [];
+    for (const c of kids) {
+      out.push({
+        id: c.id,
+        label:
+          depth > 0
+            ? `${"  ".repeat(depth)}└ ${c.name}`
+            : c.name,
+      });
+      walk(c.id, depth + 1);
+    }
+  };
+  walk(null, 0);
+  return out;
 }
 
 interface ProductData {
@@ -72,7 +103,7 @@ export default function ProductForm({
     fileName: (initialData as ProductData | undefined)?.fileName ?? "",
     imageUrl: (initialData as ProductData | undefined)?.imageUrl ?? "",
   }));
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [uploadingDigital, setUploadingDigital] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const digitalFileRef = useRef<HTMLInputElement>(null);
@@ -213,17 +244,7 @@ export default function ProductForm({
     setForm({ ...form, variants: form.variants.filter((_, i) => i !== index) });
   };
 
-  const flatCategories: { id: string; name: string; isChild: boolean }[] = [];
-  categories
-    .filter((c) => !c.parentId)
-    .forEach((parent) => {
-      flatCategories.push({ id: parent.id, name: parent.name, isChild: false });
-      if (parent.children) {
-        parent.children.forEach((child) => {
-          flatCategories.push({ id: child.id, name: child.name, isChild: true });
-        });
-      }
-    });
+  const flatCategories = buildCategorySelectOptions(categories);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
@@ -301,7 +322,7 @@ export default function ProductForm({
               <option value="">Sin categoría</option>
               {flatCategories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
-                  {cat.isChild ? `  └ ${cat.name}` : cat.name}
+                  {cat.label}
                 </option>
               ))}
             </select>

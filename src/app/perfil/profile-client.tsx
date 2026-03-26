@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { formatPrice } from "@/lib/utils";
@@ -17,7 +17,10 @@ import {
   FiChevronDown,
   FiDownload,
   FiLock,
+  FiShield,
 } from "react-icons/fi";
+import toast from "react-hot-toast";
+import Image from "next/image";
 
 interface Order {
   id: string;
@@ -55,6 +58,7 @@ interface UserData {
   phone: string | null;
   address: string | null;
   city: string | null;
+  twoFactorEnabled?: boolean;
 }
 
 const orderStatusLabels: Record<string, { label: string; color: string }> = {
@@ -87,10 +91,13 @@ export default function ProfileClient({
   user,
   orders,
   bookings,
+  admin2FARequired = false,
 }: {
   user: UserData | null;
   orders: Order[];
   bookings: Booking[];
+  /** Venís del panel admin sin 2FA: hay que activarlo antes de volver */
+  admin2FARequired?: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<Tab>("datos");
   const [editing, setEditing] = useState(false);
@@ -112,6 +119,60 @@ export default function ProfileClient({
     next2: "",
   });
   const [pwdSaving, setPwdSaving] = useState(false);
+  const [twoFAEnabled, setTwoFAEnabled] = useState(user?.twoFactorEnabled ?? false);
+  const [twoFASetup, setTwoFASetup] = useState<{
+    secret: string;
+    qrBase64: string;
+  } | null>(null);
+  const [twoFAToken, setTwoFAToken] = useState("");
+  const [twoFABusy, setTwoFABusy] = useState(false);
+  const [twoFABackupCodes, setTwoFABackupCodes] = useState<string[] | null>(null);
+  const twoFAAnchorRef = useRef<HTMLDivElement>(null);
+
+  const startTwoFASetup = useCallback(async () => {
+    setTwoFABusy(true);
+    try {
+      const res = await fetch("/api/auth/2fa/setup", {
+        method: "POST",
+      });
+      const d = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(d.error || "Error al iniciar configuración");
+        return;
+      }
+      setTwoFASetup({
+        secret: d.secret,
+        qrBase64: d.qrBase64,
+      });
+    } catch {
+      toast.error("Error de red");
+    } finally {
+      setTwoFABusy(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!admin2FARequired || twoFAEnabled || twoFASetup) return;
+    setActiveTab("datos");
+    const k =
+      typeof window !== "undefined" && user?.id
+        ? `karamba-admin-2fa-auto-${user.id}`
+        : null;
+    if (k && sessionStorage.getItem(k)) return;
+    if (k) sessionStorage.setItem(k, "1");
+    void startTwoFASetup();
+  }, [
+    admin2FARequired,
+    twoFAEnabled,
+    twoFASetup,
+    user?.id,
+    startTwoFASetup,
+  ]);
+
+  useEffect(() => {
+    if (!admin2FARequired || !twoFASetup || !twoFAAnchorRef.current) return;
+    twoFAAnchorRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [admin2FARequired, twoFASetup]);
 
   useEffect(() => {
     fetch("/api/profile/digital-downloads")
@@ -226,6 +287,18 @@ export default function ProfileClient({
           animate={{ opacity: 1, y: 0 }}
           className="bg-white rounded-2xl border border-primary-light/30 p-6 sm:p-8"
         >
+          {admin2FARequired && !twoFAEnabled && (
+            <div className="mb-6 p-4 rounded-2xl border border-amber-200 bg-amber-50 text-sm text-amber-950">
+              <p className="font-semibold text-amber-900 mb-1">
+                Activá la verificación en dos pasos (obligatorio para administradores)
+              </p>
+              <p className="text-xs text-amber-800/90">
+                El panel de administración solo se habilita después de vincular una app
+                Authenticator (Google, Microsoft, etc.) escaneando el código QR que
+                aparece abajo y confirmando con el código de 6 dígitos.
+              </p>
+            </div>
+          )}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full bg-primary-light/40 flex items-center justify-center">
@@ -377,6 +450,145 @@ export default function ProfileClient({
                 </button>
               </div>
             </div>
+          </div>
+
+          <div
+            ref={twoFAAnchorRef}
+            id="seguridad-admin-2fa"
+            className="mt-10 pt-8 border-t border-gray-100 scroll-mt-24"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <FiShield className="text-primary" size={18} />
+              <h3 className="font-bold text-warm-gray text-sm">
+                Verificación en dos pasos (Authenticator)
+              </h3>
+            </div>
+            <p className="text-xs text-gray-500 mb-4 max-w-xl">
+              {admin2FARequired && !twoFAEnabled
+                ? "Como administradora es obligatorio activar 2FA: escaneá el QR con tu app y confirmá con el código. Luego, en cada inicio de sesión te pediremos un código de la app además de la contraseña."
+                : "Si sos administradora de Karamba y activás 2FA, al iniciar sesión te pediremos un código de la app Google Authenticator o Microsoft Authenticator además de la contraseña."}
+            </p>
+
+            {twoFABackupCodes && (
+              <div className="mb-4 p-4 rounded-xl bg-amber-50 border border-amber-200 text-sm">
+                <p className="font-semibold text-amber-900 mb-2">
+                  Guardá estos códigos de respaldo (solo se muestran una vez):
+                </p>
+                <ul className="font-mono text-xs text-amber-950 space-y-1">
+                  {twoFABackupCodes.map((c) => (
+                    <li key={c}>{c}</li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  className="mt-3 text-xs font-semibold text-amber-800 underline"
+                  onClick={() => setTwoFABackupCodes(null)}
+                >
+                  Ya los guardé
+                </button>
+              </div>
+            )}
+
+            {twoFAEnabled ? (
+              <p className="text-sm text-green-700 font-medium">
+                2FA activado en tu cuenta.
+              </p>
+            ) : !twoFASetup ? (
+              <button
+                type="button"
+                disabled={twoFABusy}
+                onClick={() => void startTwoFASetup()}
+                className="px-4 py-2.5 rounded-xl bg-warm-gray text-white text-sm font-semibold hover:opacity-95 disabled:opacity-40"
+              >
+                {twoFABusy ? "…" : "Activar 2FA"}
+              </button>
+            ) : (
+              <div className="space-y-4 max-w-md">
+                <p className="text-xs text-gray-600">
+                  Escaneá el código QR con tu app Authenticator y luego ingresá el
+                  código de 6 dígitos para confirmar.
+                </p>
+                <div className="relative w-[220px] h-[220px] border border-gray-200 rounded-xl overflow-hidden bg-white">
+                  <Image
+                    src={twoFASetup.qrBase64}
+                    alt="QR 2FA"
+                    width={220}
+                    height={220}
+                    unoptimized
+                    className="object-contain"
+                  />
+                </div>
+                <p className="text-[10px] text-gray-400 font-mono break-all">
+                  Si no podés escanear: secret manual (base32) — {twoFASetup.secret}
+                </p>
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">
+                    Código de 6 dígitos
+                  </label>
+                  <input
+                    value={twoFAToken}
+                    onChange={(e) =>
+                      setTwoFAToken(e.target.value.replace(/\D/g, "").slice(0, 6))
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm font-mono tracking-widest text-center"
+                    placeholder="000000"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={twoFABusy || twoFAToken.length !== 6}
+                    onClick={async () => {
+                      setTwoFABusy(true);
+                      try {
+                        const res = await fetch("/api/auth/2fa/verify-setup", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            secret: twoFASetup.secret,
+                            token: twoFAToken,
+                          }),
+                        });
+                        const d = await res.json().catch(() => ({}));
+                        if (!res.ok) {
+                          toast.error(d.error || "Código incorrecto");
+                          return;
+                        }
+                        setTwoFABackupCodes(d.backupCodes || []);
+                        setTwoFAEnabled(true);
+                        setTwoFASetup(null);
+                        setTwoFAToken("");
+                        if (typeof window !== "undefined" && user?.id) {
+                          sessionStorage.removeItem(
+                            `karamba-admin-2fa-auto-${user.id}`
+                          );
+                        }
+                        toast.success("2FA activado");
+                      } catch {
+                        toast.error("Error de red");
+                      } finally {
+                        setTwoFABusy(false);
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-40"
+                  >
+                    Confirmar activación
+                  </button>
+                  <button
+                    type="button"
+                    disabled={twoFABusy}
+                    onClick={() => {
+                      setTwoFASetup(null);
+                      setTwoFAToken("");
+                    }}
+                    className="px-4 py-2 rounded-xl border border-gray-200 text-sm text-gray-600"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </motion.div>
       )}

@@ -4,6 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { useState } from "react";
+import SiteModals from "@/components/site/site-modals";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -12,6 +13,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <SessionProvider refetchOnWindowFocus>
       <QueryClientProvider client={queryClient}>
         {children}
+        <SiteModals />
         <Toaster
           position="bottom-right"
           toastOptions={{

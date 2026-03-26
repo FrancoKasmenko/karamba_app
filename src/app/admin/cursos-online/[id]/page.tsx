@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { isLessonUploadVideoUrl } from "@/lib/online-course-api";
 import OnlineCourseForm from "../online-course-form";
+import GrantOnlineAccessCard from "./grant-access-card";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -62,6 +63,7 @@ export default async function EditarCursoOnlinePage({ params }: Props) {
         Editar: {course.title}
       </h1>
       <OnlineCourseForm initial={initial} />
+      <GrantOnlineAccessCard courseId={id} />
     </div>
   );
 }

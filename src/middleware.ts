@@ -38,6 +38,14 @@ export async function middleware(req: NextRequest) {
       u.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(u);
     }
+    const twoFAPending = Boolean(
+      (token as { twoFAPending?: boolean }).twoFAPending,
+    );
+    if (twoFAPending) {
+      const u = new URL("/login/2fa", req.url);
+      u.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(u);
+    }
     if (token.role !== "ADMIN") {
       return NextResponse.redirect(new URL("/", req.url));
     }

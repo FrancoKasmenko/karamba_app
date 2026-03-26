@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { isLocalUploadPath, resolveMediaPath } from "@/lib/image-url";
 import { motion, AnimatePresence } from "framer-motion";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
@@ -9,6 +10,10 @@ import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 interface SlideData {
   id: string;
   image: string;
+  title?: string | null;
+  subtitle?: string | null;
+  buttonText?: string | null;
+  buttonLink?: string | null;
 }
 
 const localSlides: SlideData[] = [
@@ -40,12 +45,20 @@ interface BannerFromDB {
   buttonLink?: string | null;
 }
 
+function isExternalHref(href: string) {
+  return /^https?:\/\//i.test(href.trim());
+}
+
 export default function HeroSlider({ banners }: { banners?: BannerFromDB[] }) {
   const slides: SlideData[] =
     banners && banners.length > 0
       ? banners.map((b) => ({
           id: b.id,
           image: resolveMediaPath(b.image) || b.image,
+          title: b.title,
+          subtitle: b.subtitle,
+          buttonText: b.buttonText,
+          buttonLink: b.buttonLink,
         }))
       : localSlides;
 
@@ -78,6 +91,52 @@ export default function HeroSlider({ banners }: { banners?: BannerFromDB[] }) {
   }, [isPaused, next, slides.length]);
 
   const slide = slides[current];
+  const href = slide.buttonLink?.trim() || "";
+  const hasLink = href.length > 0;
+  const external = hasLink && isExternalHref(href);
+
+  const showOverlay = !!(
+    slide.title ||
+    slide.subtitle ||
+    slide.buttonText
+  );
+
+  const imageBlock = (
+    <Image
+      src={slide.image}
+      alt={slide.title?.trim() || "Karamba"}
+      fill
+      unoptimized={isLocalUploadPath(slide.image)}
+      className="object-cover rounded-2xl"
+      priority={current === 0}
+      sizes="100vw"
+    />
+  );
+
+  const slideInner = (
+    <>
+      {imageBlock}
+      {showOverlay && (
+        <div className="absolute inset-0 pointer-events-none flex flex-col justify-end p-6 sm:p-10 rounded-2xl bg-gradient-to-t from-black/55 via-black/10 to-transparent">
+          {slide.title && (
+            <p className="text-white text-lg sm:text-2xl font-extrabold drop-shadow-md max-w-xl">
+              {slide.title}
+            </p>
+          )}
+          {slide.subtitle && (
+            <p className="text-white/90 text-sm sm:text-base mt-1 max-w-xl drop-shadow">
+              {slide.subtitle}
+            </p>
+          )}
+          {slide.buttonText && (
+            <span className="mt-4 inline-flex items-center self-start px-4 py-2 rounded-full bg-white text-primary-dark text-xs sm:text-sm font-bold shadow-lg">
+              {slide.buttonText}
+            </span>
+          )}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <section
@@ -97,15 +156,33 @@ export default function HeroSlider({ banners }: { banners?: BannerFromDB[] }) {
             transition={{ duration: 0.5, ease: "easeInOut" }}
             className="absolute inset-0"
           >
-            <Image
-              src={slide.image}
-              alt="Karamba"
-              fill
-              unoptimized={isLocalUploadPath(slide.image)}
-              className="object-cover rounded-2xl"
-              priority={current === 0}
-              sizes="100vw"
-            />
+            {hasLink ? (
+              external ? (
+                <a
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute inset-0 z-10 block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                >
+                  <span className="sr-only">
+                    {slide.title?.trim() || "Abrir enlace del banner"}
+                  </span>
+                  {slideInner}
+                </a>
+              ) : (
+                <Link
+                  href={href}
+                  className="absolute inset-0 z-10 block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                >
+                  <span className="sr-only">
+                    {slide.title?.trim() || "Ir al enlace del banner"}
+                  </span>
+                  {slideInner}
+                </Link>
+              )
+            ) : (
+              slideInner
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -113,6 +190,7 @@ export default function HeroSlider({ banners }: { banners?: BannerFromDB[] }) {
       {slides.length > 1 && (
         <>
           <button
+            type="button"
             onClick={prev}
             aria-label="Anterior"
             className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white shadow-lg border border-primary-light/50 flex items-center justify-center text-primary-dark hover:bg-primary hover:text-white hover:shadow-primary/30 transition-all duration-200"
@@ -120,6 +198,7 @@ export default function HeroSlider({ banners }: { banners?: BannerFromDB[] }) {
             <FiChevronLeft size={22} />
           </button>
           <button
+            type="button"
             onClick={next}
             aria-label="Siguiente"
             className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white shadow-lg border border-primary-light/50 flex items-center justify-center text-primary-dark hover:bg-primary hover:text-white hover:shadow-primary/30 transition-all duration-200"
@@ -134,6 +213,7 @@ export default function HeroSlider({ banners }: { banners?: BannerFromDB[] }) {
           {slides.map((_, i) => (
             <button
               key={i}
+              type="button"
               onClick={() => goTo(i)}
               aria-label={`Ir al slide ${i + 1}`}
               className={`h-2.5 rounded-full transition-all duration-300 ${

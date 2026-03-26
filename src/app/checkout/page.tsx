@@ -116,6 +116,12 @@ export default function CheckoutPage() {
   const [skipPhysicalDelivery, setSkipPhysicalDelivery] = useState(false);
   const [onlineCourseOnly, setOnlineCourseOnly] = useState(false);
   const [cartMetaLoading, setCartMetaLoading] = useState(true);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discount: number;
+  } | null>(null);
+  const [couponBusy, setCouponBusy] = useState(false);
 
   const cartProductIdsKey = [...new Set(items.map((i) => i.productId))]
     .sort()
@@ -172,6 +178,11 @@ export default function CheckoutPage() {
   }, [cartProductIdsKey, items.length]);
 
   useEffect(() => {
+    setAppliedCoupon(null);
+    setCouponInput("");
+  }, [cartProductIdsKey, payMethod]);
+
+  useEffect(() => {
     if (session?.user) {
       setForm((prev) => ({
         ...prev,
@@ -199,7 +210,55 @@ export default function CheckoutPage() {
         0
       )
     : 0;
-  const finalTotal = subtotal + shippingCost;
+  const discountCapped = appliedCoupon
+    ? Math.min(appliedCoupon.discount, subtotal)
+    : 0;
+  const payableSubtotal = Math.max(0, subtotal - discountCapped);
+  const finalTotal = payableSubtotal + shippingCost;
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim();
+    if (!code) {
+      toast.error("Ingresá un código");
+      return;
+    }
+    setCouponBusy(true);
+    try {
+      const res = await fetch("/api/checkout/validate-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          couponCode: code,
+          paymentMethod:
+            payMethod === "transfer" ? "BANK_TRANSFER" : "MERCADOPAGO",
+          items: items.map((i) => ({
+            productId: i.productId,
+            quantity: i.quantity,
+            variant: i.variant,
+          })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data.error || "Cupón no válido");
+        setAppliedCoupon(null);
+        return;
+      }
+      setAppliedCoupon({
+        code: data.code || code.toUpperCase(),
+        discount: Number(data.discount) || 0,
+      });
+      toast.success(
+        (Number(data.discount) || 0) > 0
+          ? "Cupón aplicado"
+          : "Cupón registrado (sin descuento en este carrito)"
+      );
+    } catch {
+      toast.error("Error al validar el cupón");
+    } finally {
+      setCouponBusy(false);
+    }
+  };
 
   const validate = (): FormErrors => {
     const e: FormErrors = {};
@@ -344,6 +403,7 @@ export default function CheckoutPage() {
             payMethod === "transfer" ? "BANK_TRANSFER" : "MERCADOPAGO",
           paymentAccountId:
             payMethod === "transfer" ? selectedAccountId : undefined,
+          couponCode: appliedCoupon?.code ?? "",
         }),
       });
 
@@ -937,7 +997,40 @@ export default function CheckoutPage() {
                 ))}
               </div>
 
-              <div className="border-t border-gray-100 pt-4 space-y-2.5">
+              <div className="border-t border-gray-100 pt-4 space-y-3">
+                <div className="rounded-xl border border-gray-100 bg-soft-gray/40 p-3 space-y-2">
+                  <p className="text-xs font-semibold text-gray-600">
+                    Código de descuento
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={couponInput}
+                      onChange={(e) =>
+                        setCouponInput(e.target.value.toUpperCase())
+                      }
+                      placeholder="Ej. VERANO25"
+                      disabled={couponBusy}
+                      className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm uppercase outline-none focus:border-primary bg-white"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="shrink-0"
+                      disabled={couponBusy}
+                      onClick={() => void applyCoupon()}
+                    >
+                      {couponBusy ? "…" : "Aplicar"}
+                    </Button>
+                  </div>
+                  {appliedCoupon && discountCapped > 0 && (
+                    <p className="text-xs text-emerald-700 font-medium">
+                      Cupón {appliedCoupon.code}: −{formatPrice(discountCapped)}
+                    </p>
+                  )}
+                </div>
+
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Subtotal</span>
                   <span className="text-gray-700 font-medium">
@@ -954,6 +1047,15 @@ export default function CheckoutPage() {
                     <strong>12% de descuento</strong> aplicado por pago con
                     transferencia.
                   </p>
+                )}
+
+                {discountCapped > 0 && (
+                  <div className="flex justify-between text-sm text-emerald-800">
+                    <span>Descuento (cupón)</span>
+                    <span className="font-semibold">
+                      −{formatPrice(discountCapped)}
+                    </span>
+                  </div>
                 )}
 
                 <div className="flex justify-between text-sm">
@@ -983,7 +1085,7 @@ export default function CheckoutPage() {
                   <span className="font-bold text-warm-gray">Total</span>
                   <span className="text-xl font-extrabold text-primary-dark">
                     {showShippingTBD
-                      ? `${formatPrice(subtotal)} + envío`
+                      ? `${formatPrice(payableSubtotal)} + envío`
                       : formatPrice(finalTotal)}
                   </span>
                 </div>

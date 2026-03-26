@@ -21,6 +21,8 @@ import {
   FiX,
   FiHome,
   FiDollarSign,
+  FiTag,
+  FiMessageSquare,
 } from "react-icons/fi";
 
 const mainLinks = [
@@ -30,6 +32,8 @@ const mainLinks = [
   { href: "/admin/cursos", label: "Cursos", icon: FiBookOpen },
   { href: "/admin/cursos-online", label: "Cursos online", icon: FiMonitor },
   { href: "/admin/banners", label: "Banners", icon: FiImage },
+  { href: "/admin/cupones", label: "Cupones", icon: FiTag },
+  { href: "/admin/modales", label: "Modales del sitio", icon: FiMessageSquare },
 ];
 
 const salesLinks = [
@@ -45,6 +49,18 @@ const payLinks = [
 const configLinks = [
   { href: "/admin/configuracion", label: "Configuración", icon: FiSettings },
 ];
+
+function isAdminNavActive(pathname: string, href: string): boolean {
+  if (href === "/admin") return pathname === "/admin";
+  if (pathname === href) return true;
+  if (href === "/admin/cursos") {
+    return (
+      pathname.startsWith("/admin/cursos") &&
+      !pathname.startsWith("/admin/cursos-online")
+    );
+  }
+  return pathname.startsWith(`${href}/`);
+}
 
 function NavSection({
   title,
@@ -64,9 +80,7 @@ function NavSection({
       </p>
       <nav className="space-y-0.5">
         {links.map((link) => {
-          const isActive =
-            pathname === link.href ||
-            (link.href !== "/admin" && pathname.startsWith(link.href));
+          const isActive = isAdminNavActive(pathname, link.href);
           return (
             <Link
               key={link.href}

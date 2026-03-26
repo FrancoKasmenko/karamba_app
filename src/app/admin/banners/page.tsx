@@ -113,7 +113,7 @@ export default function AdminBannersPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("\u00bfEliminar este banner?")) return;
+    if (!confirm("¿Eliminar este banner?")) return;
     const res = await fetch(`/api/admin/banners/${id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Banner eliminado");
@@ -172,14 +172,14 @@ export default function AdminBannersPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <input
               type="text"
-              placeholder="T\u00edtulo (opcional)"
+              placeholder="Título (opcional)"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
               className="px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-primary"
             />
             <input
               type="text"
-              placeholder="Subt\u00edtulo (opcional)"
+              placeholder="Subtítulo (opcional)"
               value={form.subtitle}
               onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
               className="px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-primary"
@@ -220,18 +220,21 @@ export default function AdminBannersPage() {
             )}
             <input
               type="text"
-              placeholder="Texto del bot\u00f3n (opcional)"
+              placeholder="Texto del botón (opcional)"
               value={form.buttonText}
               onChange={(e) => setForm({ ...form, buttonText: e.target.value })}
               className="px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-primary"
             />
             <input
               type="text"
-              placeholder="Link del bot\u00f3n (ej: /productos)"
+              placeholder="Enlace al tocar el banner (ej. /productos o https://…)"
               value={form.buttonLink}
               onChange={(e) => setForm({ ...form, buttonLink: e.target.value })}
               className="px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none focus:border-primary"
             />
+            <p className="sm:col-span-2 text-xs text-gray-500 -mt-2">
+              Si completás el enlace, toda la imagen del banner será clicable. El texto del botón es opcional y se muestra sobre la imagen.
+            </p>
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -254,7 +257,7 @@ export default function AdminBannersPage() {
 
       {banners.length === 0 ? (
         <p className="text-gray-400 text-center py-10">
-          No hay banners. Cre\u00e1 el primero.
+          No hay banners. Creá el primero.
         </p>
       ) : (
         <div className="space-y-3">
@@ -277,7 +280,7 @@ export default function AdminBannersPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="font-semibold text-warm-gray truncate">
-                    {banner.title || "(Sin t\u00edtulo)"}
+                    {banner.title || "(Sin título)"}
                   </p>
                   <p className="text-xs text-gray-400 truncate">{banner.image}</p>
                 </div>

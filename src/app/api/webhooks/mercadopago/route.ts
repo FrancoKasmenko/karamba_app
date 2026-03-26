@@ -6,6 +6,7 @@ import {
   syncOnlineCourseAccessFromOrder,
 } from "@/lib/order-course-sync";
 import { handleOrderStatusChangeEmails } from "@/lib/email-events";
+import { recordCouponRedemptionIfNeeded } from "@/lib/coupon-checkout";
 
 export async function POST(req: Request) {
   try {
@@ -100,6 +101,8 @@ export async function POST(req: Request) {
       existingOrder.status,
       newStatus
     );
+
+    await recordCouponRedemptionIfNeeded(orderId);
 
     console.log(`[WEBHOOK MP] Orden ${orderId} actualizada: ${existingOrder.status} → ${newStatus} | Payment: ${paymentData.id}`);
 

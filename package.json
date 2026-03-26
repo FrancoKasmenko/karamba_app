@@ -11,6 +11,7 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
+    "db:export": "node scripts/export-database.mjs",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -30,8 +31,10 @@
     "next": "^15.3.0",
     "next-auth": "^4.24.11",
     "nodemailer": "^7.0.13",
+    "otplib": "^13.4.0",
     "pdf-lib": "^1.17.1",
     "puppeteer": "^24.40.0",
+    "qrcode": "^1.5.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.4.1",
@@ -49,6 +52,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^22.13.10",
     "@types/nodemailer": "^7.0.11",
+    "@types/qrcode": "^1.5.6",
     "@types/react": "^19.0.12",
     "@types/react-dom": "^19.0.4",
     "eslint": "^9.0.0",

@@ -1,6 +1,8 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { Role } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import AdminSidebar from "./admin-sidebar";
 
 export default async function AdminLayout({
@@ -12,6 +14,19 @@ export default async function AdminLayout({
 
   if (!session?.user || session.user.role !== "ADMIN") {
     redirect("/login");
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { role: true, twoFactorEnabled: true },
+  });
+
+  if (!dbUser || dbUser.role !== Role.ADMIN) {
+    redirect("/");
+  }
+
+  if (!dbUser.twoFactorEnabled) {
+    redirect("/perfil?admin2fa=1");
   }
 
   return (

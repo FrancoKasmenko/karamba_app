@@ -447,10 +447,10 @@ export default function Navbar() {
           </AnimatePresence>
         </header>
 
-        {/* —— Barra de categorías (dinámica) —— */}
+        {/* —— Barra de categorías: solo desktop; en móvil están en el menú hamburguesa —— */}
         <div
           className={cn(
-            "border-t rounded-b-2xl overflow-visible",
+            "hidden md:block border-t rounded-b-2xl overflow-visible",
             isDigital
               ? "bg-gradient-to-r from-zinc-900/95 via-zinc-800/90 to-zinc-900/95 border-white/10"
               : "bg-gradient-to-r from-primary-light/95 via-primary-light/85 to-secondary-light/70 border-white/30"
@@ -458,7 +458,7 @@ export default function Navbar() {
         >
           <div className="mx-auto max-w-7xl overflow-visible">
             {/* Desktop + tablet: varias filas centradas si no caben en una línea */}
-            <div className="hidden md:flex flex-wrap justify-center items-stretch px-2 sm:px-4 py-1 gap-y-0">
+            <div className="flex flex-wrap justify-center items-stretch px-2 sm:px-4 py-1 gap-y-0">
               <Link
                 href="/productos"
                 className={cn(
@@ -500,35 +500,6 @@ export default function Navbar() {
                     )}
                   </Link>
                 </div>
-              ))}
-            </div>
-
-            {/* Mobile: mismas filas centradas (sin recorte lateral) */}
-            <div className="flex md:hidden flex-wrap justify-center items-stretch px-2 py-1 gap-y-0">
-              <Link
-                href="/productos"
-                className={cn(
-                  "shrink-0 px-3 py-2.5 text-[10px] font-bold tracking-[0.1em] uppercase whitespace-nowrap border-r last:border-r-0",
-                  isDigital
-                    ? "text-zinc-300 border-white/10"
-                    : "text-warm-gray/90 border-white/25"
-                )}
-              >
-                Todos
-              </Link>
-              {categories.map((cat) => (
-                <Link
-                  key={cat.id}
-                  href={`/productos?categoria=${cat.slug}`}
-                  className={cn(
-                    "shrink-0 px-3 py-2.5 text-[10px] font-bold tracking-[0.1em] uppercase whitespace-nowrap border-r last:border-r-0",
-                    isDigital
-                      ? "text-zinc-200 border-white/10"
-                      : "text-warm-gray border-white/25"
-                  )}
-                >
-                  {cat.name}
-                </Link>
               ))}
             </div>
           </div>

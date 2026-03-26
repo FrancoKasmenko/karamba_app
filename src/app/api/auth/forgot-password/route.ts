@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
-import { createHash, randomBytes } from "crypto";
 import { prisma } from "@/lib/prisma";
 import { normalizeEmail } from "@/lib/sanitize";
-import { fireAndForget, notifyPasswordResetEmail } from "@/lib/email-events";
+import { createPasswordResetTokenAndSendEmail } from "@/lib/password-reset-token";
 import { checkForgotPasswordRateLimit } from "@/lib/forgot-password-rate-limit";
-
-function hashToken(raw: string): string {
-  return createHash("sha256").update(raw, "utf8").digest("hex");
-}
 
 export async function POST(req: Request) {
   const generic = {
@@ -47,18 +42,7 @@ export async function POST(req: Request) {
       return NextResponse.json(generic);
     }
 
-    const rawToken = randomBytes(32).toString("hex");
-    const tokenHash = hashToken(rawToken);
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-
-    await prisma.$transaction([
-      prisma.passwordResetToken.deleteMany({ where: { userId: user.id } }),
-      prisma.passwordResetToken.create({
-        data: { tokenHash, userId: user.id, expiresAt },
-      }),
-    ]);
-
-    fireAndForget(notifyPasswordResetEmail(user.id, rawToken));
+    await createPasswordResetTokenAndSendEmail(user.id);
 
     return NextResponse.json(generic);
   } catch (e) {

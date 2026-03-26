@@ -7,6 +7,7 @@ import {
   syncOnlineCourseAccessFromOrder,
 } from "@/lib/order-course-sync";
 import { handleOrderStatusChangeEmails } from "@/lib/email-events";
+import { recordCouponRedemptionIfNeeded } from "@/lib/coupon-checkout";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -65,6 +66,8 @@ export async function POST(_req: Request, context: RouteContext) {
     await syncOnlineCourseAccessFromOrder(id, newStatus, order.paymentId);
 
     await handleOrderStatusChangeEmails(id, order.status, newStatus);
+
+    await recordCouponRedemptionIfNeeded(id);
 
     console.log(`[SYNC PAYMENT] Orden ${id}: ${order.status} → ${newStatus} | MP status: ${paymentData.status}`);
 

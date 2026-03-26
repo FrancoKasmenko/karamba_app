@@ -10,6 +10,11 @@ import {
   unitPriceForPaymentMethod,
 } from "@/lib/product-pricing";
 import type { Product, Variant } from "@prisma/client";
+import {
+  applyProportionalDiscountToLines,
+  validateCouponForCart,
+  type CartLineInput,
+} from "@/lib/coupon-checkout";
 
 type ProductWithVariants = Product & { variants: Variant[] };
 
@@ -31,7 +36,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    const { items, shipping, paymentMethod, paymentAccountId } = await req.json();
+    const body = await req.json();
+    const {
+      items,
+      shipping,
+      paymentMethod,
+      paymentAccountId,
+      couponCode: rawCouponCode,
+    } = body;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -109,6 +121,47 @@ export async function POST(req: Request) {
       };
     });
 
+    const productSubtotal = roundMoney(
+      resolvedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    );
+
+    const couponLines: CartLineInput[] = resolvedItems.map((r) => ({
+      productId: r.productId,
+      quantity: r.quantity,
+      variant: r.variant,
+    }));
+
+    const couponCheck = await validateCouponForCart(
+      rawCouponCode,
+      payMethodEnum,
+      couponLines,
+      productById
+    );
+    if (!couponCheck.ok) {
+      return NextResponse.json({ error: couponCheck.error }, { status: 400 });
+    }
+
+    const chargedItems = applyProportionalDiscountToLines(
+      resolvedItems,
+      productSubtotal,
+      couponCheck.discount
+    );
+    const newSubtotal = roundMoney(
+      chargedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    );
+    const couponDiscountRecorded = roundMoney(productSubtotal - newSubtotal);
+
+    const orderItemsPayload = chargedItems.map((item) => ({
+      itemType: "PRODUCT" as const,
+      productId: item.productId,
+      productName: item.name,
+      price: item.price,
+      quantity: item.quantity,
+      variant: item.variant,
+    }));
+
+    const couponCodeStored = couponCheck.code ? couponCheck.code : null;
+
     if (method === "BANK_TRANSFER") {
       if (!paymentAccountId || typeof paymentAccountId !== "string") {
         return NextResponse.json(
@@ -128,11 +181,7 @@ export async function POST(req: Request) {
         );
       }
 
-      const total = resolvedItems.reduce(
-        (sum, item) => sum + item.price * item.quantity,
-        0
-      );
-      const finalTotal = total + shippingCost;
+      const finalTotal = newSubtotal + shippingCost;
 
       const noteExtra = `\n[Pago: transferencia → ${acc.bankName} · ${acc.holderName} · ${acc.accountNumber}]`;
       const order = await prisma.order.create({
@@ -150,15 +199,10 @@ export async function POST(req: Request) {
           shippingCity: shipping.city,
           shippingPhone: shipping.phone,
           notes: (shipping.notes || "") + noteExtra,
+          couponCode: couponCodeStored,
+          couponDiscount: couponDiscountRecorded,
           items: {
-            create: resolvedItems.map((item) => ({
-              itemType: "PRODUCT" as const,
-              productId: item.productId,
-              productName: item.name,
-              price: item.price,
-              quantity: item.quantity,
-              variant: item.variant,
-            })),
+            create: orderItemsPayload,
           },
         },
       });
@@ -171,12 +215,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const total = resolvedItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
-
-    const finalTotal = total + shippingCost;
+    const finalTotal = newSubtotal + shippingCost;
 
     const order = await prisma.order.create({
       data: {
@@ -190,15 +229,10 @@ export async function POST(req: Request) {
         shippingCity: shipping.city,
         shippingPhone: shipping.phone,
         notes: shipping.notes,
+        couponCode: couponCodeStored,
+        couponDiscount: couponDiscountRecorded,
         items: {
-          create: resolvedItems.map((item) => ({
-            itemType: "PRODUCT" as const,
-            productId: item.productId,
-            productName: item.name,
-            price: item.price,
-            quantity: item.quantity,
-            variant: item.variant,
-          })),
+          create: orderItemsPayload,
         },
       },
     });
@@ -213,7 +247,7 @@ export async function POST(req: Request) {
       const preference = new Preference(mpClient);
       const baseUrl = getBaseUrl();
 
-      const mpItems = resolvedItems.map((item, idx: number) => ({
+      const mpItems = chargedItems.map((item, idx: number) => ({
         id: `item-${idx}`,
         title: item.name,
         unit_price: Number(item.price),
@@ -258,7 +292,9 @@ export async function POST(req: Request) {
 
       const result = await preference.create({ body: preferenceBody });
 
-      console.log(`[CHECKOUT] Preferencia MP creada: ${result.id} | Orden: ${order.id}`);
+      console.log(
+        `[CHECKOUT] Preferencia MP creada: ${result.id} | Orden: ${order.id}`
+      );
 
       return NextResponse.json({
         orderId: order.id,

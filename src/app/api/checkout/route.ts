@@ -162,6 +162,22 @@ export async function POST(req: Request) {
 
     const couponCodeStored = couponCheck.code ? couponCheck.code : null;
 
+    let mercadoPagoClient: Awaited<
+      ReturnType<typeof getMercadoPagoClient>
+    > = null;
+    if (method !== "BANK_TRANSFER") {
+      mercadoPagoClient = await getMercadoPagoClient();
+      if (!mercadoPagoClient) {
+        return NextResponse.json(
+          {
+            error:
+              "Mercado Pago no está disponible: falta el Access Token, no está activado en Admin → Pagos, o la configuración no se guardó. Revisá credenciales y volvé a guardar.",
+          },
+          { status: 503 }
+        );
+      }
+    }
+
     if (method === "BANK_TRANSFER") {
       if (!paymentAccountId || typeof paymentAccountId !== "string") {
         return NextResponse.json(
@@ -241,75 +257,80 @@ export async function POST(req: Request) {
 
     fireAndForget(notifyOrderCreated(order.id));
 
-    const mpClient = await getMercadoPagoClient();
+    const preference = new Preference(mercadoPagoClient!);
+    const baseUrl = getBaseUrl();
 
-    if (mpClient) {
-      const preference = new Preference(mpClient);
-      const baseUrl = getBaseUrl();
+    const mpItems = chargedItems.map((item, idx: number) => ({
+      id: `item-${idx}`,
+      title: item.name,
+      unit_price: Number(item.price),
+      quantity: Number(item.quantity),
+      currency_id: "UYU",
+    }));
 
-      const mpItems = chargedItems.map((item, idx: number) => ({
-        id: `item-${idx}`,
-        title: item.name,
-        unit_price: Number(item.price),
-        quantity: Number(item.quantity),
+    if (shippingCost > 0) {
+      mpItems.push({
+        id: "shipping",
+        title: "Costo de envío",
+        unit_price: Number(shippingCost),
+        quantity: 1,
         currency_id: "UYU",
-      }));
-
-      if (shippingCost > 0) {
-        mpItems.push({
-          id: "shipping",
-          title: "Costo de envío",
-          unit_price: Number(shippingCost),
-          quantity: 1,
-          currency_id: "UYU",
-        });
-      }
-
-      const preferenceBody = {
-        items: mpItems,
-        back_urls: {
-          success: `${baseUrl}/checkout/success?orderId=${order.id}`,
-          failure: `${baseUrl}/checkout?error=payment_failed`,
-          pending: `${baseUrl}/checkout/success?orderId=${order.id}&pending=true`,
-        },
-        auto_return: "approved" as const,
-        external_reference: order.id,
-        payer: {
-          email: shipping.email || session.user.email,
-        },
-        notification_url: undefined as string | undefined,
-      };
-
-      if (isPublicUrl()) {
-        const webhookUrl = getWebhookUrl();
-        preferenceBody.notification_url = webhookUrl;
-        console.log(`[CHECKOUT] Webhook URL: ${webhookUrl}`);
-      } else {
-        console.log(
-          "[CHECKOUT] URL local detectada, webhook omitido. Usá BASE_URL con ngrok para recibir webhooks."
-        );
-      }
-
-      const result = await preference.create({ body: preferenceBody });
-
-      console.log(
-        `[CHECKOUT] Preferencia MP creada: ${result.id} | Orden: ${order.id}`
-      );
-
-      return NextResponse.json({
-        orderId: order.id,
-        initPoint: result.init_point,
       });
     }
 
-    console.log("[CHECKOUT] MercadoPago no configurado, orden sin pago");
+    const preferenceBody = {
+      items: mpItems,
+      back_urls: {
+        success: `${baseUrl}/checkout/success?orderId=${order.id}`,
+        failure: `${baseUrl}/checkout?error=payment_failed`,
+        pending: `${baseUrl}/checkout/success?orderId=${order.id}&pending=true`,
+      },
+      auto_return: "approved" as const,
+      external_reference: order.id,
+      payer: {
+        email: shipping.email || session.user.email,
+      },
+      notification_url: undefined as string | undefined,
+    };
 
-    await prisma.order.update({
-      where: { id: order.id },
-      data: { status: "PROCESSING" },
+    if (isPublicUrl()) {
+      const webhookUrl = getWebhookUrl();
+      preferenceBody.notification_url = webhookUrl;
+      console.log(`[CHECKOUT] Webhook URL: ${webhookUrl}`);
+    } else {
+      console.log(
+        "[CHECKOUT] URL local detectada, webhook omitido. Usá BASE_URL con ngrok para recibir webhooks."
+      );
+    }
+
+    let result;
+    try {
+      result = await preference.create({ body: preferenceBody });
+    } catch (mpErr) {
+      console.error("[CHECKOUT] Mercado Pago API:", mpErr);
+      await prisma.order
+        .update({
+          where: { id: order.id },
+          data: { status: "CANCELLED" },
+        })
+        .catch(() => {});
+      return NextResponse.json(
+        {
+          error:
+            "Mercado Pago rechazó crear el pago (token inválido, moneda o datos). Revisá credenciales de producción en Admin → Pagos.",
+        },
+        { status: 502 }
+      );
+    }
+
+    console.log(
+      `[CHECKOUT] Preferencia MP creada: ${result.id} | Orden: ${order.id}`
+    );
+
+    return NextResponse.json({
+      orderId: order.id,
+      initPoint: result.init_point,
     });
-
-    return NextResponse.json({ orderId: order.id });
   } catch (error) {
     console.error("[CHECKOUT] Error:", error);
     return NextResponse.json(

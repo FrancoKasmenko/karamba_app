@@ -18,6 +18,7 @@ export async function GET() {
 
   return NextResponse.json({
     ...settings,
+    mercadoPagoTokenConfigured: Boolean(settings.mercadoPagoAccessToken),
     mercadoPagoAccessToken: settings.mercadoPagoAccessToken
       ? "••••••••" + settings.mercadoPagoAccessToken.slice(-8)
       : null,
@@ -33,8 +34,18 @@ export async function PUT(req: Request) {
   const data: Record<string, unknown> = {};
   let instagramFeedSyncWarnings: string[] = [];
 
-  if (body.mercadoPagoAccessToken !== undefined && !body.mercadoPagoAccessToken.startsWith("••")) {
-    data.mercadoPagoAccessToken = body.mercadoPagoAccessToken || null;
+  if (body.mercadoPagoAccessToken !== undefined) {
+    const raw = body.mercadoPagoAccessToken;
+    if (raw === null || raw === "") {
+      data.mercadoPagoAccessToken = null;
+    } else if (typeof raw === "string") {
+      const t = raw.trim();
+      if (t.length === 0) {
+        data.mercadoPagoAccessToken = null;
+      } else if (!t.startsWith("••")) {
+        data.mercadoPagoAccessToken = t;
+      }
+    }
   }
   if (body.mercadoPagoPublicKey !== undefined) {
     data.mercadoPagoPublicKey = body.mercadoPagoPublicKey || null;
@@ -96,6 +107,7 @@ export async function PUT(req: Request) {
 
   return NextResponse.json({
     ...settings,
+    mercadoPagoTokenConfigured: Boolean(settings.mercadoPagoAccessToken),
     mercadoPagoAccessToken: settings.mercadoPagoAccessToken
       ? "••••••••" + settings.mercadoPagoAccessToken.slice(-8)
       : null,

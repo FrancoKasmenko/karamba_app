@@ -14,6 +14,7 @@ import {
 
 interface Settings {
   mercadoPagoAccessToken: string | null;
+  mercadoPagoTokenConfigured?: boolean;
   mercadoPagoPublicKey: string | null;
   mercadoPagoEnabled: boolean;
 }
@@ -35,14 +36,23 @@ export default function AdminPagosPage() {
 
   useEffect(() => {
     fetch("/api/admin/settings")
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) {
+          toast.error(data?.error || "No se pudo cargar la configuración de pagos");
+          setLoading(false);
+          return;
+        }
         setSettings(data);
         setForm({
-          accessToken: data.mercadoPagoAccessToken || "",
+          accessToken: "",
           publicKey: data.mercadoPagoPublicKey || "",
-          enabled: data.mercadoPagoEnabled,
+          enabled: Boolean(data.mercadoPagoEnabled),
         });
+        setLoading(false);
+      })
+      .catch(() => {
+        toast.error("Error de red al cargar pagos");
         setLoading(false);
       });
 
@@ -57,18 +67,34 @@ export default function AdminPagosPage() {
     setSaving(true);
 
     try {
+      const payload: Record<string, unknown> = {
+        mercadoPagoPublicKey: form.publicKey,
+        mercadoPagoEnabled: form.enabled,
+      };
+      const trimmedToken = form.accessToken.trim();
+      if (trimmedToken.length > 0) {
+        payload.mercadoPagoAccessToken = trimmedToken;
+      }
+
       const res = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mercadoPagoAccessToken: form.accessToken,
-          mercadoPagoPublicKey: form.publicKey,
-          mercadoPagoEnabled: form.enabled,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
+      if (!res.ok) {
+        toast.error(data?.error || "No se pudo guardar");
+        setSaving(false);
+        return;
+      }
       setSettings(data);
+      setForm((f) => ({
+        ...f,
+        accessToken: "",
+        publicKey: data.mercadoPagoPublicKey || "",
+        enabled: Boolean(data.mercadoPagoEnabled),
+      }));
       toast.success("Configuración de pagos guardada");
     } catch {
       toast.error("Error al guardar");
@@ -86,8 +112,9 @@ export default function AdminPagosPage() {
 
   if (loading) return <div className="text-gray-400 py-10">Cargando...</div>;
 
-  const isActive =
-    settings.mercadoPagoEnabled && settings.mercadoPagoAccessToken;
+  const tokenOk =
+    settings.mercadoPagoTokenConfigured ?? Boolean(settings.mercadoPagoAccessToken);
+  const isActive = settings.mercadoPagoEnabled && tokenOk;
   const isNgrok = webhookUrl.includes("ngrok");
 
   return (
@@ -153,17 +180,29 @@ export default function AdminPagosPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Access Token
               </label>
+              {tokenOk && !form.accessToken && (
+                <p className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2 mb-2">
+                  Ya hay un token guardado. Dejá el campo vacío para conservarlo, o pegá
+                  uno nuevo para reemplazarlo.
+                </p>
+              )}
               <input
                 type="password"
                 value={form.accessToken}
                 onChange={(e) =>
                   setForm({ ...form, accessToken: e.target.value })
                 }
-                placeholder="APP_USR-xxxx..."
+                placeholder={
+                  tokenOk
+                    ? "Nuevo token (opcional)…"
+                    : "APP_USR-… (credenciales de producción)"
+                }
+                autoComplete="off"
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm font-mono"
               />
               <p className="text-xs text-gray-400 mt-1">
-                Lo encontrás en tu panel de MercadoPago → Credenciales
+                Mercado Pago → Tu negocio → Configuración → Credenciales de producción
+                (no uses el token de prueba en el sitio real).
               </p>
             </div>
 

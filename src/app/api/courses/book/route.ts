@@ -4,11 +4,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getMercadoPagoClient, Preference } from "@/lib/mercadopago";
 import { getBaseUrl, getWebhookUrl, isPublicUrl } from "@/lib/base-url";
-import {
-  fireAndForget,
-  handleOrderStatusChangeEmails,
-  notifyOrderCreated,
-} from "@/lib/email-events";
+import { fireAndForget, notifyOrderCreated } from "@/lib/email-events";
 
 export async function POST(req: Request) {
   try {
@@ -60,6 +56,8 @@ export async function POST(req: Request) {
     const lineName = `Curso: ${courseSession.course.title} – ${dateStr}`;
     const price = Number(courseSession.course.price);
 
+    const mpClient = await getMercadoPagoClient();
+
     if (existingBooking?.orderId) {
       const prevOrder = await prisma.order.findUnique({
         where: { id: existingBooking.orderId },
@@ -70,43 +68,66 @@ export async function POST(req: Request) {
         prevOrder.status === "PENDING" &&
         existingBooking.status === "PENDING"
       ) {
-        const mpClient = await getMercadoPagoClient();
-        if (mpClient) {
-          const preference = new Preference(mpClient);
-          const baseUrl = getBaseUrl();
-          const preferenceBody = {
-            items: [
-              {
-                id: `course-${courseSession.course.id}`,
-                title: `${courseSession.course.title} - ${dateStr} ${courseSession.startTime}`,
-                unit_price: price,
-                quantity: 1,
-                currency_id: "UYU",
-              },
-            ],
-            back_urls: {
-              success: `${baseUrl}/cursos/reserva-exitosa?orderId=${prevOrder.id}`,
-              failure: `${baseUrl}/cursos/${courseSession.course.slug}?error=payment_failed`,
-              pending: `${baseUrl}/cursos/reserva-exitosa?orderId=${prevOrder.id}&pending=true`,
+        if (!mpClient) {
+          return NextResponse.json(
+            {
+              error:
+                "Mercado Pago no está habilitado. Configuralo en Administración → Pagos.",
             },
-            auto_return: "approved" as const,
-            external_reference: prevOrder.id,
-            payer: { email: session.user.email },
-            notification_url: undefined as string | undefined,
-          };
-          if (isPublicUrl()) preferenceBody.notification_url = getWebhookUrl();
+            { status: 503 }
+          );
+        }
+        const preference = new Preference(mpClient);
+        const baseUrl = getBaseUrl();
+        const preferenceBody = {
+          items: [
+            {
+              id: `course-${courseSession.course.id}`,
+              title: `${courseSession.course.title} - ${dateStr} ${courseSession.startTime}`,
+              unit_price: price,
+              quantity: 1,
+              currency_id: "UYU",
+            },
+          ],
+          back_urls: {
+            success: `${baseUrl}/cursos/reserva-exitosa?orderId=${prevOrder.id}`,
+            failure: `${baseUrl}/cursos/${courseSession.course.slug}?error=payment_failed`,
+            pending: `${baseUrl}/cursos/reserva-exitosa?orderId=${prevOrder.id}&pending=true`,
+          },
+          auto_return: "approved" as const,
+          external_reference: prevOrder.id,
+          payer: { email: session.user.email },
+          notification_url: undefined as string | undefined,
+        };
+        if (isPublicUrl()) preferenceBody.notification_url = getWebhookUrl();
+        try {
           const result = await preference.create({ body: preferenceBody });
           return NextResponse.json({
             orderId: prevOrder.id,
             bookingId: existingBooking.id,
             initPoint: result.init_point,
           });
+        } catch (mpErr) {
+          console.error("[COURSE BOOKING] Mercado Pago API (retry):", mpErr);
+          return NextResponse.json(
+            {
+              error:
+                "No se pudo iniciar el pago con Mercado Pago. Revisá credenciales en Admin → Pagos.",
+            },
+            { status: 502 }
+          );
         }
-        return NextResponse.json({
-          orderId: prevOrder.id,
-          bookingId: existingBooking.id,
-        });
       }
+    }
+
+    if (!mpClient) {
+      return NextResponse.json(
+        {
+          error:
+            "Mercado Pago no está habilitado. Configuralo en Administración → Pagos (token y activar).",
+        },
+        { status: 503 }
+      );
     }
 
     const { order, booking } = await prisma.$transaction(async (tx) => {
@@ -158,62 +179,61 @@ export async function POST(req: Request) {
 
     fireAndForget(notifyOrderCreated(order.id));
 
-    const mpClient = await getMercadoPagoClient();
+    const preference = new Preference(mpClient);
+    const baseUrl = getBaseUrl();
 
-    if (mpClient) {
-      const preference = new Preference(mpClient);
-      const baseUrl = getBaseUrl();
-
-      const preferenceBody = {
-        items: [
-          {
-            id: `course-${courseSession.course.id}`,
-            title: `${courseSession.course.title} - ${dateStr} ${courseSession.startTime}`,
-            unit_price: price,
-            quantity: 1,
-            currency_id: "UYU",
-          },
-        ],
-        back_urls: {
-          success: `${baseUrl}/cursos/reserva-exitosa?orderId=${order.id}`,
-          failure: `${baseUrl}/cursos/${courseSession.course.slug}?error=payment_failed`,
-          pending: `${baseUrl}/cursos/reserva-exitosa?orderId=${order.id}&pending=true`,
+    const preferenceBody = {
+      items: [
+        {
+          id: `course-${courseSession.course.id}`,
+          title: `${courseSession.course.title} - ${dateStr} ${courseSession.startTime}`,
+          unit_price: price,
+          quantity: 1,
+          currency_id: "UYU",
         },
-        auto_return: "approved" as const,
-        external_reference: order.id,
-        payer: { email: session.user.email },
-        notification_url: undefined as string | undefined,
-      };
+      ],
+      back_urls: {
+        success: `${baseUrl}/cursos/reserva-exitosa?orderId=${order.id}`,
+        failure: `${baseUrl}/cursos/${courseSession.course.slug}?error=payment_failed`,
+        pending: `${baseUrl}/cursos/reserva-exitosa?orderId=${order.id}&pending=true`,
+      },
+      auto_return: "approved" as const,
+      external_reference: order.id,
+      payer: { email: session.user.email },
+      notification_url: undefined as string | undefined,
+    };
 
-      if (isPublicUrl()) {
-        preferenceBody.notification_url = getWebhookUrl();
-      }
+    if (isPublicUrl()) {
+      preferenceBody.notification_url = getWebhookUrl();
+    }
 
+    try {
       const result = await preference.create({ body: preferenceBody });
-
       return NextResponse.json({
         orderId: order.id,
         bookingId: booking.id,
         initPoint: result.init_point,
       });
+    } catch (mpErr) {
+      console.error("[COURSE BOOKING] Mercado Pago API:", mpErr);
+      await prisma.$transaction([
+        prisma.order.update({
+          where: { id: order.id },
+          data: { status: "CANCELLED" },
+        }),
+        prisma.courseBooking.update({
+          where: { id: booking.id },
+          data: { status: "CANCELLED" },
+        }),
+      ]);
+      return NextResponse.json(
+        {
+          error:
+            "Mercado Pago rechazó crear el pago. Revisá credenciales de producción en Admin → Pagos.",
+        },
+        { status: 502 }
+      );
     }
-
-    await prisma.$transaction([
-      prisma.order.update({
-        where: { id: order.id },
-        data: { status: "PAID" },
-      }),
-      prisma.courseBooking.update({
-        where: { id: booking.id },
-        data: { status: "PAID" },
-      }),
-    ]);
-
-    fireAndForget(
-      handleOrderStatusChangeEmails(order.id, "PENDING", "PAID")
-    );
-
-    return NextResponse.json({ orderId: order.id, bookingId: booking.id });
   } catch (error) {
     console.error("[COURSE BOOKING] Error:", error);
     return NextResponse.json({ error: "Error al procesar la reserva" }, { status: 500 });

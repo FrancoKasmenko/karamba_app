@@ -130,6 +130,30 @@ export default function AdminPagosPage() {
         .
       </p>
 
+      <div className="max-w-2xl mb-6 p-4 rounded-2xl bg-blue-50 border border-blue-100 text-sm text-blue-950">
+        <p className="font-semibold mb-2">Qué credenciales usar (Checkout Pro)</p>
+        <ul className="list-disc pl-5 space-y-1.5 text-blue-900/90">
+          <li>
+            <strong>No</strong> hace falta <strong>Client ID</strong> ni{" "}
+            <strong>Client Secret</strong> para esta integración: el servidor solo usa el{" "}
+            <strong>Access token</strong> de Mercado Pago.
+          </li>
+          <li>
+            En el panel: tu aplicación → <strong>Credenciales de producción</strong> → copiá el
+            valor que diga <strong>Access token</strong> (suele ser largo; muchas cuentas usan
+            prefijo <code className="bg-white/80 px-1 rounded text-xs">APP_USR-</code>).
+          </li>
+          <li>
+            No pegues la <strong>Public Key</strong> en el campo del Access token: son dos cosas
+            distintas. La Public key en Karamba es opcional.
+          </li>
+          <li>
+            Usá siempre token de <strong>producción</strong> en el sitio en vivo; el de{" "}
+            <strong>prueba</strong> solo sirve en entornos de test.
+          </li>
+        </ul>
+      </div>
+
       <div className="max-w-2xl space-y-6">
         {/* Status */}
         <div

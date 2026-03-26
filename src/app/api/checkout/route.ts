@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getMercadoPagoClient, Preference } from "@/lib/mercadopago";
+import {
+  describeMercadoPagoError,
+  getMercadoPagoClient,
+  Preference,
+} from "@/lib/mercadopago";
 import { getBaseUrl, getWebhookUrl, isPublicUrl } from "@/lib/base-url";
 import { fireAndForget, notifyOrderCreated } from "@/lib/email-events";
 import {
@@ -308,16 +312,20 @@ export async function POST(req: Request) {
       result = await preference.create({ body: preferenceBody });
     } catch (mpErr) {
       console.error("[CHECKOUT] Mercado Pago API:", mpErr);
+      const detail = describeMercadoPagoError(mpErr);
       await prisma.order
         .update({
           where: { id: order.id },
           data: { status: "CANCELLED" },
         })
         .catch(() => {});
+      const hint =
+        "En Admin → Pagos pegá solo el Access token de credenciales de producción (no hace falta Client ID ni Client Secret; no pongas la Public key en el campo del token).";
       return NextResponse.json(
         {
-          error:
-            "Mercado Pago rechazó crear el pago (token inválido, moneda o datos). Revisá credenciales de producción en Admin → Pagos.",
+          error: detail
+            ? `Mercado Pago: ${detail}. ${hint}`
+            : `No se pudo crear el pago en Mercado Pago. ${hint} Revisá que sea el token de producción y que no tenga espacios de más.`,
         },
         { status: 502 }
       );

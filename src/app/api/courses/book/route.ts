@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getMercadoPagoClient, Preference } from "@/lib/mercadopago";
+import {
+  describeMercadoPagoError,
+  getMercadoPagoClient,
+  Preference,
+} from "@/lib/mercadopago";
 import { getBaseUrl, getWebhookUrl, isPublicUrl } from "@/lib/base-url";
 import { fireAndForget, notifyOrderCreated } from "@/lib/email-events";
 
@@ -109,10 +113,12 @@ export async function POST(req: Request) {
           });
         } catch (mpErr) {
           console.error("[COURSE BOOKING] Mercado Pago API (retry):", mpErr);
+          const detail = describeMercadoPagoError(mpErr);
           return NextResponse.json(
             {
-              error:
-                "No se pudo iniciar el pago con Mercado Pago. Revisá credenciales en Admin → Pagos.",
+              error: detail
+                ? `Mercado Pago: ${detail}`
+                : "No se pudo iniciar el pago. Revisá el Access token en Admin → Pagos.",
             },
             { status: 502 }
           );
@@ -216,6 +222,7 @@ export async function POST(req: Request) {
       });
     } catch (mpErr) {
       console.error("[COURSE BOOKING] Mercado Pago API:", mpErr);
+      const detail = describeMercadoPagoError(mpErr);
       await prisma.$transaction([
         prisma.order.update({
           where: { id: order.id },
@@ -228,8 +235,9 @@ export async function POST(req: Request) {
       ]);
       return NextResponse.json(
         {
-          error:
-            "Mercado Pago rechazó crear el pago. Revisá credenciales de producción en Admin → Pagos.",
+          error: detail
+            ? `Mercado Pago: ${detail}`
+            : "Mercado Pago rechazó crear el pago. Revisá el Access token (producción) en Admin → Pagos.",
         },
         { status: 502 }
       );

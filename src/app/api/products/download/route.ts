@@ -4,9 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { readFile } from "fs/promises";
 import path from "path";
-import { isAllowedDigitalPath } from "@/lib/digital-product-upload";
+import { isAllowedDigitalPath } from "@/lib/digital-product-path";
 import { resolveMediaPath } from "@/lib/image-url";
 import { uploadPublicUrlToAbsolutePath } from "@/lib/upload-disk-path";
+import { normalizeProductDigitalFiles } from "@/lib/product-digital-files";
 import type { OrderStatus } from "@prisma/client";
 
 const PAID: OrderStatus[] = ["PAID", "SHIPPED", "DELIVERED"];
@@ -17,22 +18,37 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "No autenticado" }, { status: 401 });
   }
 
-  const productId = new URL(req.url).searchParams.get("productId");
+  const url = new URL(req.url);
+  const productId = url.searchParams.get("productId");
   if (!productId) {
     return NextResponse.json({ error: "Falta productId" }, { status: 400 });
   }
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
-    select: { id: true, isDigital: true, fileUrl: true, fileName: true },
+    select: {
+      id: true,
+      isDigital: true,
+      fileUrl: true,
+      fileName: true,
+      digitalFiles: true,
+    },
   });
 
-  if (!product?.isDigital || !product.fileUrl) {
+  const files = product ? normalizeProductDigitalFiles(product) : [];
+  if (!product?.isDigital || files.length === 0) {
     return NextResponse.json({ error: "No disponible" }, { status: 404 });
   }
 
+  const rawIdx = url.searchParams.get("fileIndex") ?? "0";
+  const parsedIdx = parseInt(rawIdx, 10);
+  const fileIndex =
+    Number.isFinite(parsedIdx) ? parsedIdx : 0;
+  const idx = Math.max(0, Math.min(files.length - 1, fileIndex));
+  const entry = files[idx];
+
   const fileUrl =
-    resolveMediaPath(product.fileUrl) || product.fileUrl.trim();
+    resolveMediaPath(entry.fileUrl) || entry.fileUrl.trim();
   if (!isAllowedDigitalPath(fileUrl)) {
     return NextResponse.json({ error: "Ruta inválida" }, { status: 400 });
   }
@@ -61,7 +77,7 @@ export async function GET(req: Request) {
   }
   try {
     const buf = await readFile(diskPath);
-    const downloadName = product.fileName || "descarga";
+    const downloadName = entry.fileName || "descarga";
     const ext = path.extname(diskPath).toLowerCase();
     const type =
       ext === ".pdf"

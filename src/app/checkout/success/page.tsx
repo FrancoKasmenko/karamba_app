@@ -23,6 +23,7 @@ interface DigitalRow {
   slug: string;
   fileName: string | null;
   canDownload: boolean;
+  files: { fileName: string; index: number }[];
 }
 
 function SuccessContent() {
@@ -205,40 +206,51 @@ function SuccessContent() {
             !digitalLoading &&
             digital.length > 0 && (
               <div className="space-y-3">
-                {digital.map((row) => (
-                  <div
-                    key={row.productId}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-gray-100 bg-violet-50/40 p-4"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-warm-gray truncate">
-                        {row.productName}
-                      </p>
-                      {row.fileName && (
-                        <p className="text-xs text-gray-500 truncate">{row.fileName}</p>
-                      )}
-                      {!row.canDownload && (
-                        <p className="text-xs text-amber-700 mt-1">
-                          La descarga se habilita cuando el pago quede confirmado
-                          en el sistema.
+                {digital.map((row) => {
+                  const fileLinks =
+                    row.files?.length ?
+                      row.files
+                    : [{ fileName: row.fileName || "archivo", index: 0 }];
+                  return (
+                    <div
+                      key={row.productId}
+                      className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-violet-50/40 p-4"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-warm-gray truncate">
+                          {row.productName}
                         </p>
-                      )}
+                        {!row.canDownload && (
+                          <p className="text-xs text-amber-700 mt-1">
+                            La descarga se habilita cuando el pago quede confirmado
+                            en el sistema.
+                          </p>
+                        )}
+                      </div>
+                      {row.canDownload ?
+                        <div className="flex flex-col gap-2">
+                          {fileLinks.map((f) => (
+                            <a
+                              key={`${row.productId}-${f.index}`}
+                              href={api(
+                                `/api/products/download?productId=${encodeURIComponent(row.productId)}&fileIndex=${f.index}`
+                              )}
+                              className="inline-flex items-center justify-center gap-2 shrink-0 rounded-full bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 hover:bg-violet-700 transition-colors"
+                            >
+                              <FiDownload size={16} />
+                              <span className="truncate max-w-full">
+                                Descargar{f.fileName ? `: ${f.fileName}` : ""}
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                      : <span className="text-xs text-gray-400">
+                          Podés volver cuando el estado sea &quot;Pagado&quot;
+                        </span>
+                      }
                     </div>
-                    {row.canDownload ? (
-                      <a
-                        href={api(`/api/products/download?productId=${encodeURIComponent(row.productId)}`)}
-                        className="inline-flex items-center justify-center gap-2 shrink-0 rounded-full bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 hover:bg-violet-700 transition-colors"
-                      >
-                        <FiDownload size={16} />
-                        Descargar archivo
-                      </a>
-                    ) : (
-                      <span className="text-xs text-gray-400 sm:text-right">
-                        Podés volver cuando el estado sea &quot;Pagado&quot;
-                      </span>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
         </motion.div>

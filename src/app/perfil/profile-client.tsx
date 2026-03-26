@@ -84,6 +84,7 @@ interface DigitalDownloadRow {
   productName: string;
   slug: string;
   fileName: string | null;
+  files?: { fileName: string; index: number }[];
   orderId: string;
   purchasedAt: string;
 }
@@ -723,44 +724,56 @@ export default function ProfileClient({
               <p className="text-sm text-gray-500 mb-4">
                 Archivos disponibles mientras el pago de tu compra esté aprobado.
               </p>
-              {downloads.map((d) => (
-                <div
-                  key={d.productId}
-                  className="bg-white rounded-2xl border border-primary-light/20 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-                >
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-1">
-                      <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-violet-100 text-violet-800">
-                        Descargable
-                      </span>
-                      <Link
-                        href={`/productos/${d.slug}`}
-                        className="text-sm font-bold text-warm-gray hover:text-primary truncate"
-                      >
-                        {d.productName}
-                      </Link>
-                    </div>
-                    {d.fileName && (
-                      <p className="text-xs text-gray-400 truncate">{d.fileName}</p>
-                    )}
-                    <p className="text-[11px] text-gray-400 mt-1">
-                      Compra del{" "}
-                      {new Date(d.purchasedAt).toLocaleDateString("es-UY", {
-                        day: "numeric",
-                        month: "long",
-                        year: "numeric",
-                      })}
-                    </p>
-                  </div>
-                  <a
-                    href={api(`/api/products/download?productId=${encodeURIComponent(d.productId)}`)}
-                    className="inline-flex items-center justify-center gap-2 shrink-0 bg-primary text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-95 transition-opacity"
+              {downloads.map((d) => {
+                const fileLinks =
+                  d.files?.length ?
+                    d.files
+                  : [{ fileName: d.fileName || "archivo", index: 0 }];
+                return (
+                  <div
+                    key={d.productId}
+                    className="bg-white rounded-2xl border border-primary-light/20 p-4 sm:p-5 flex flex-col gap-4"
                   >
-                    <FiDownload size={16} />
-                    Descargar archivo
-                  </a>
-                </div>
-              ))}
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-violet-100 text-violet-800">
+                          Descargable
+                        </span>
+                        <Link
+                          href={`/productos/${d.slug}`}
+                          className="text-sm font-bold text-warm-gray hover:text-primary truncate"
+                        >
+                          {d.productName}
+                        </Link>
+                      </div>
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        Compra del{" "}
+                        {new Date(d.purchasedAt).toLocaleDateString("es-UY", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+                      {fileLinks.map((f) => (
+                        <a
+                          key={`${d.productId}-${f.index}`}
+                          href={api(
+                            `/api/products/download?productId=${encodeURIComponent(d.productId)}&fileIndex=${f.index}`
+                          )}
+                          className="inline-flex items-center justify-center gap-2 shrink-0 bg-primary text-white text-sm font-semibold px-5 py-2.5 rounded-full hover:opacity-95 transition-opacity"
+                        >
+                          <FiDownload size={16} />
+                          <span className="truncate max-w-[200px]">
+                            {f.fileName || "Descargar"}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </motion.div>

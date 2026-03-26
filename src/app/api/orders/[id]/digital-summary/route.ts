@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { normalizeProductDigitalFiles } from "@/lib/product-digital-files";
 import type { OrderStatus } from "@prisma/client";
 
 const PAID: OrderStatus[] = ["PAID", "SHIPPED", "DELIVERED"];
@@ -42,6 +43,8 @@ export async function GET(_req: Request, context: Ctx) {
           isDigital: true,
           isOnlineCourse: true,
           fileName: true,
+          fileUrl: true,
+          digitalFiles: true,
           slug: true,
         },
       },
@@ -50,13 +53,21 @@ export async function GET(_req: Request, context: Ctx) {
 
   const digital = items
     .filter((i) => i.product?.isDigital)
-    .map((i) => ({
-      productId: i.product!.id,
-      productName: i.productName,
-      slug: i.product!.slug,
-      fileName: i.product!.fileName,
-      canDownload,
-    }));
+    .map((i) => {
+      const p = i.product!;
+      const files = normalizeProductDigitalFiles(p).map((f, index) => ({
+        fileName: f.fileName,
+        index,
+      }));
+      return {
+        productId: p.id,
+        productName: i.productName,
+        slug: p.slug,
+        fileName: p.fileName,
+        files,
+        canDownload,
+      };
+    });
 
   const withProduct = items.filter((i) => i.productId && i.product);
   const onlineCourseOnly =

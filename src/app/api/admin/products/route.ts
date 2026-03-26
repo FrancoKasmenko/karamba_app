@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { slugify } from "@/lib/utils";
+import { validateDigitalFilesForSave } from "@/lib/product-digital-files";
 
 export async function GET() {
   const { error } = await requireAdmin();
@@ -32,11 +34,20 @@ export async function POST(req: Request) {
       );
     }
 
-    if (body.isDigital && !body.fileUrl) {
-      return NextResponse.json(
-        { error: "Los productos digitales requieren un archivo" },
-        { status: 400 }
-      );
+    const isDigital = Boolean(body.isDigital);
+    let digitalList: { fileUrl: string; fileName: string }[] = [];
+    if (isDigital) {
+      const files =
+        Array.isArray(body.digitalFiles) && body.digitalFiles.length > 0
+          ? body.digitalFiles
+          : body.fileUrl
+            ? [{ fileUrl: body.fileUrl, fileName: body.fileName || "archivo" }]
+            : [];
+      const v = validateDigitalFilesForSave(files);
+      if (!v.ok) {
+        return NextResponse.json({ error: v.error }, { status: 400 });
+      }
+      digitalList = v.value;
     }
     const slug = slugify(body.name);
 
@@ -51,9 +62,10 @@ export async function POST(req: Request) {
         imageUrl: body.imageUrl?.trim() || null,
         featured: body.featured || false,
         active: body.active !== false,
-        isDigital: Boolean(body.isDigital),
-        fileUrl: body.fileUrl || null,
-        fileName: body.fileName || null,
+        isDigital,
+        digitalFiles: isDigital ? digitalList : Prisma.DbNull,
+        fileUrl: isDigital ? digitalList[0]?.fileUrl ?? null : null,
+        fileName: isDigital ? digitalList[0]?.fileName ?? null : null,
         categoryId: body.categoryId || null,
         variants: body.variants?.length
           ? {

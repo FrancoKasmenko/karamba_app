@@ -13,13 +13,7 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const raw = formData.get("file");
 
-    const { buffer, type, name, size } = await readFormFileBuffer(raw);
-
-    console.log("UPLOAD DEBUG (digital):");
-    console.log("Type:", type || "(vacío)");
-    console.log("Size:", size);
-    console.log("Buffer length:", buffer.length);
-    console.log("Name:", name);
+    const { buffer, name } = await readFormFileBuffer(raw);
 
     const saved = await saveDigitalProductFile(buffer, name);
     return NextResponse.json(saved);

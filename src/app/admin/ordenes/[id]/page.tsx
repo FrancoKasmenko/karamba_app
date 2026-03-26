@@ -11,6 +11,7 @@ import {
   isLocalUploadPath,
   resolveMediaPath,
 } from "@/lib/image-url";
+import { normalizeProductDigitalFiles } from "@/lib/product-digital-files";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
 import {
@@ -47,6 +48,7 @@ interface OrderItem {
     isDigital?: boolean;
     fileName?: string | null;
     fileUrl?: string | null;
+    digitalFiles?: unknown;
   } | null;
   courseSession?: {
     id: string;
@@ -395,16 +397,28 @@ export default function OrderDetailPage({
                     <p className="text-xs text-gray-500 mt-0.5">
                       {item.quantity} × {formatPrice(item.price)}
                     </p>
-                    {item.product?.isDigital && item.product.fileName && (
-                      <p className="text-[11px] text-violet-700 mt-1 font-mono break-all">
-                        Archivo: {item.product.fileName}
-                        {item.product.fileUrl && (
-                          <span className="block text-gray-400 font-sans mt-0.5">
-                            {item.product.fileUrl}
-                          </span>
-                        )}
-                      </p>
-                    )}
+                    {item.product?.isDigital &&
+                      (() => {
+                        const dfs = normalizeProductDigitalFiles({
+                          digitalFiles: item.product.digitalFiles,
+                          fileUrl: item.product.fileUrl,
+                          fileName: item.product.fileName,
+                        });
+                        if (dfs.length === 0) return null;
+                        return (
+                          <div className="text-[11px] text-violet-700 mt-1 space-y-1">
+                            {dfs.map((f, i) => (
+                              <p key={`${f.fileUrl}-${i}`} className="font-mono break-all">
+                                Archivo {dfs.length > 1 ? `${i + 1}: ` : ""}
+                                {f.fileName}
+                                <span className="block text-gray-400 font-sans mt-0.5">
+                                  {f.fileUrl}
+                                </span>
+                              </p>
+                            ))}
+                          </div>
+                        );
+                      })()}
                   </div>
                   <p className="text-sm font-bold text-warm-gray shrink-0 self-center">
                     {formatPrice(item.price * item.quantity)}

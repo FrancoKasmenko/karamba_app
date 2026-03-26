@@ -3,6 +3,7 @@ import { api } from "@/lib/public-api";
 
 import { useEffect, useState, use } from "react";
 import ProductForm from "../product-form";
+import { normalizeProductDigitalFiles } from "@/lib/product-digital-files";
 
 export default function EditProductoPage({
   params,
@@ -63,8 +64,11 @@ export default function EditProductoPage({
             stock: v.stock,
           })),
           isDigital: Boolean(product.isDigital),
-          fileUrl: (product.fileUrl as string) || "",
-          fileName: (product.fileName as string) || "",
+          digitalFiles: normalizeProductDigitalFiles({
+            digitalFiles: product.digitalFiles,
+            fileUrl: product.fileUrl as string | null,
+            fileName: product.fileName as string | null,
+          }),
         }}
       />
     </div>

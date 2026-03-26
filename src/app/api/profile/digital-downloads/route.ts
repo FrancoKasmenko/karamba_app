@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { normalizeProductDigitalFiles } from "@/lib/product-digital-files";
 import type { OrderStatus } from "@prisma/client";
 
 const PAID: OrderStatus[] = ["PAID", "SHIPPED", "DELIVERED"];
@@ -30,6 +31,8 @@ export async function GET() {
           id: true,
           slug: true,
           fileName: true,
+          fileUrl: true,
+          digitalFiles: true,
         },
       },
       order: { select: { id: true, createdAt: true } },
@@ -43,6 +46,7 @@ export async function GET() {
     productName: string;
     slug: string;
     fileName: string | null;
+    files: { fileName: string; index: number }[];
     orderId: string;
     purchasedAt: string;
   }[] = [];
@@ -52,11 +56,16 @@ export async function GET() {
     const key = r.productId;
     if (seen.has(key)) continue;
     seen.add(key);
+    const files = normalizeProductDigitalFiles(r.product).map((f, index) => ({
+      fileName: f.fileName,
+      index,
+    }));
     list.push({
       productId: r.productId,
       productName: r.productName,
       slug: r.product.slug,
       fileName: r.product.fileName,
+      files,
       orderId: r.order.id,
       purchasedAt: r.order.createdAt.toISOString(),
     });

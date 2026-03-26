@@ -33,6 +33,7 @@ export async function GET(_req: Request, context: RouteContext) {
               isDigital: true,
               fileName: true,
               fileUrl: true,
+              digitalFiles: true,
             },
           },
           courseSession: {
@@ -97,6 +98,7 @@ export async function PUT(req: Request, context: RouteContext) {
               isDigital: true,
               fileName: true,
               fileUrl: true,
+              digitalFiles: true,
             },
           },
             courseSession: {

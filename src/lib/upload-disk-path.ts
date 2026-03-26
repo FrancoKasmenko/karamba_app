@@ -11,7 +11,9 @@ export function uploadPublicUrlToAbsolutePath(url: string): string | null {
   const withoutLead = raw.replace(/^\/+/, "");
   let underUploads: string;
 
-  if (withoutLead.startsWith("api/uploads/")) {
+  if (withoutLead.startsWith("_k/uploads/")) {
+    underUploads = withoutLead.slice("_k/".length);
+  } else if (withoutLead.startsWith("api/uploads/")) {
     underUploads = withoutLead.slice("api/".length);
   } else if (withoutLead.startsWith("uploads/")) {
     underUploads = withoutLead;

@@ -144,6 +144,8 @@ model Product {
   featured    Boolean   @default(false)
   active      Boolean   @default(true)
   isDigital   Boolean   @default(false)
+  /// Lista `{ fileUrl, fileName }[]` (hasta 3). `fileUrl`/`fileName` siguen rellenándose con el primero por compatibilidad.
+  digitalFiles Json?
   fileUrl     String?
   fileName    String?
   isOnlineCourse Boolean @default(false)

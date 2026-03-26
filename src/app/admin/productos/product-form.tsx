@@ -8,6 +8,10 @@ import { FiPlus, FiTrash2, FiUpload, FiX } from "react-icons/fi";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
 import { resolveStoredProductImage, isLocalUploadPath } from "@/lib/image-url";
+import {
+  DIGITAL_FILE_MAX_BYTES,
+  MAX_DIGITAL_FILES_PER_PRODUCT,
+} from "@/lib/digital-constants";
 
 interface Variant {
   name: string;
@@ -54,6 +58,11 @@ function buildCategorySelectOptions(rows: CategoryRow[]): {
   return out;
 }
 
+interface DigitalFileRow {
+  fileUrl: string;
+  fileName: string;
+}
+
 interface ProductData {
   id?: string;
   name: string;
@@ -67,8 +76,7 @@ interface ProductData {
   categoryId: string;
   variants: Variant[];
   isDigital: boolean;
-  fileUrl: string;
-  fileName: string;
+  digitalFiles: DigitalFileRow[];
 }
 
 const defaultProduct: ProductData = {
@@ -83,14 +91,19 @@ const defaultProduct: ProductData = {
   categoryId: "",
   variants: [],
   isDigital: false,
-  fileUrl: "",
-  fileName: "",
+  digitalFiles: [],
 };
 
 export default function ProductForm({
   initialData,
 }: {
-  initialData?: Partial<ProductData> & { id?: string; variants?: Variant[] };
+  initialData?: Partial<ProductData> & {
+    id?: string;
+    variants?: Variant[];
+    /** Compat: si no hay digitalFiles, se usa el primer archivo legacy */
+    fileUrl?: string;
+    fileName?: string;
+  };
 }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -100,8 +113,17 @@ export default function ProductForm({
     ...(initialData || {}),
     variants: initialData?.variants ?? defaultProduct.variants,
     isDigital: Boolean(initialData?.isDigital),
-    fileUrl: (initialData as ProductData | undefined)?.fileUrl ?? "",
-    fileName: (initialData as ProductData | undefined)?.fileName ?? "",
+    digitalFiles:
+      initialData?.digitalFiles?.length ?
+        initialData.digitalFiles
+      : initialData?.fileUrl ?
+        [
+          {
+            fileUrl: initialData.fileUrl,
+            fileName: initialData.fileName || "archivo",
+          },
+        ]
+      : [],
     imageUrl: (initialData as ProductData | undefined)?.imageUrl ?? "",
   }));
   const [categories, setCategories] = useState<CategoryRow[]>([]);
@@ -120,8 +142,8 @@ export default function ProductForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (form.isDigital && !form.fileUrl?.trim()) {
-      toast.error("Subí el archivo del producto digital");
+    if (form.isDigital && form.digitalFiles.length === 0) {
+      toast.error("Subí al menos un archivo del producto digital");
       return;
     }
     setLoading(true);
@@ -135,9 +157,18 @@ export default function ProductForm({
         method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...form,
-          fileUrl: form.isDigital ? form.fileUrl : "",
-          fileName: form.isDigital ? form.fileName : "",
+          name: form.name,
+          description: form.description,
+          price: form.price,
+          comparePrice: form.comparePrice,
+          images: form.images,
+          imageUrl: form.imageUrl,
+          featured: form.featured,
+          active: form.active,
+          categoryId: form.categoryId,
+          variants: form.variants,
+          isDigital: form.isDigital,
+          digitalFiles: form.isDigital ? form.digitalFiles : [],
         }),
       });
 
@@ -201,6 +232,16 @@ export default function ProductForm({
   const handleDigitalUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (form.digitalFiles.length >= MAX_DIGITAL_FILES_PER_PRODUCT) {
+      toast.error(`Máximo ${MAX_DIGITAL_FILES_PER_PRODUCT} archivos por producto`);
+      if (digitalFileRef.current) digitalFileRef.current.value = "";
+      return;
+    }
+    if (file.size > DIGITAL_FILE_MAX_BYTES) {
+      toast.error("Cada archivo puede pesar como máximo 80 MB");
+      if (digitalFileRef.current) digitalFileRef.current.value = "";
+      return;
+    }
     setUploadingDigital(true);
     const fd = new FormData();
     fd.append("file", file);
@@ -217,15 +258,27 @@ export default function ProductForm({
       }
       setForm((prev) => ({
         ...prev,
-        fileUrl: data.fileUrl,
-        fileName: data.fileName || file.name,
+        digitalFiles: [
+          ...prev.digitalFiles,
+          {
+            fileUrl: data.fileUrl,
+            fileName: data.fileName || file.name,
+          },
+        ],
       }));
-      toast.success("Archivo digital guardado");
+      toast.success("Archivo agregado");
     } catch {
       toast.error("Error al subir archivo");
     }
     setUploadingDigital(false);
     if (digitalFileRef.current) digitalFileRef.current.value = "";
+  };
+
+  const removeDigitalFile = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      digitalFiles: prev.digitalFiles.filter((_, i) => i !== index),
+    }));
   };
 
   const addVariant = () => {
@@ -378,9 +431,7 @@ export default function ProductForm({
                   setForm({
                     ...form,
                     isDigital: checked,
-                    ...(checked
-                      ? {}
-                      : { fileUrl: "", fileName: "" }),
+                    ...(checked ? {} : { digitalFiles: [] }),
                   });
                 }}
                 className="rounded border-gray-300 text-primary focus:ring-primary"
@@ -398,27 +449,51 @@ export default function ProductForm({
           {form.isDigital && (
             <div className="mt-4 p-4 rounded-xl border border-secondary-light/40 bg-secondary-light/10 space-y-3">
               <p className="text-sm font-medium text-warm-gray">
-                Archivo para el cliente (PDF, ZIP, imágenes u otros)
+                Archivos para el cliente (PDF, ZIP, imágenes u otros)
               </p>
               <p className="text-xs text-gray-500">
-                Se guarda de forma segura; la descarga solo está disponible tras
-                el pago aprobado.
+                Hasta {MAX_DIGITAL_FILES_PER_PRODUCT} archivos; cada uno hasta 80
+                MB. La descarga solo está disponible tras el pago aprobado.
               </p>
+              {form.digitalFiles.length > 0 && (
+                <ul className="space-y-2">
+                  {form.digitalFiles.map((f, i) => (
+                    <li
+                      key={`${f.fileUrl}-${i}`}
+                      className="flex items-center justify-between gap-2 rounded-lg border border-gray-200/80 bg-white/60 px-3 py-2"
+                    >
+                      <span className="text-sm text-gray-700 truncate min-w-0">
+                        {f.fileName}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeDigitalFile(i)}
+                        className="p-1.5 text-gray-400 hover:text-red-500 shrink-0"
+                        aria-label="Quitar archivo"
+                      >
+                        <FiTrash2 size={16} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   type="button"
                   onClick={() => digitalFileRef.current?.click()}
-                  disabled={uploadingDigital}
+                  disabled={
+                    uploadingDigital ||
+                    form.digitalFiles.length >= MAX_DIGITAL_FILES_PER_PRODUCT
+                  }
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-primary text-primary text-sm font-medium hover:bg-primary-light/20 disabled:opacity-50"
                 >
                   <FiUpload size={16} />
-                  {uploadingDigital ? "Subiendo..." : "Subir archivo"}
+                  {uploadingDigital
+                    ? "Subiendo..."
+                    : form.digitalFiles.length >= MAX_DIGITAL_FILES_PER_PRODUCT
+                      ? "Límite de archivos alcanzado"
+                      : "Agregar archivo"}
                 </button>
-                {form.fileName && (
-                  <span className="text-sm text-gray-600 truncate max-w-[240px]">
-                    {form.fileName}
-                  </span>
-                )}
               </div>
               <input
                 ref={digitalFileRef}

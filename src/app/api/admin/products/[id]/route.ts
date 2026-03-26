@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
 import { slugify } from "@/lib/utils";
+import {
+  normalizeProductDigitalFiles,
+  validateDigitalFilesForSave,
+} from "@/lib/product-digital-files";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -35,7 +40,12 @@ export async function PUT(req: Request, context: RouteContext) {
 
     const existing = await prisma.product.findUnique({
       where: { id },
-      select: { fileUrl: true, fileName: true, onlineCourseId: true },
+      select: {
+        fileUrl: true,
+        fileName: true,
+        digitalFiles: true,
+        onlineCourseId: true,
+      },
     });
 
     if (existing?.onlineCourseId) {
@@ -52,18 +62,28 @@ export async function PUT(req: Request, context: RouteContext) {
 
     const isDigital = Boolean(body.isDigital);
 
-    const nextFileUrl =
-      isDigital && (!body.fileUrl || body.fileUrl === "")
-        ? existing?.fileUrl ?? null
-        : isDigital
-          ? body.fileUrl || null
-          : null;
-    const nextFileName =
-      isDigital && (!body.fileName || body.fileName === "")
-        ? existing?.fileName ?? null
-        : isDigital
-          ? body.fileName || null
-          : null;
+    let nextDigital: { fileUrl: string; fileName: string }[] = [];
+    if (isDigital) {
+      if (Array.isArray(body.digitalFiles)) {
+        const v = validateDigitalFilesForSave(body.digitalFiles);
+        if (!v.ok) {
+          return NextResponse.json({ error: v.error }, { status: 400 });
+        }
+        nextDigital = v.value;
+      } else {
+        nextDigital = normalizeProductDigitalFiles({
+          digitalFiles: existing?.digitalFiles,
+          fileUrl: existing?.fileUrl,
+          fileName: existing?.fileName,
+        });
+        if (nextDigital.length === 0) {
+          return NextResponse.json(
+            { error: "Los productos digitales requieren al menos un archivo" },
+            { status: 400 }
+          );
+        }
+      }
+    }
 
     const product = await prisma.product.update({
       where: { id },
@@ -78,8 +98,9 @@ export async function PUT(req: Request, context: RouteContext) {
         featured: body.featured || false,
         active: body.active !== false,
         isDigital,
-        fileUrl: nextFileUrl,
-        fileName: nextFileName,
+        digitalFiles: isDigital ? nextDigital : Prisma.DbNull,
+        fileUrl: isDigital ? nextDigital[0]?.fileUrl ?? null : null,
+        fileName: isDigital ? nextDigital[0]?.fileName ?? null : null,
         categoryId: body.categoryId || null,
         variants: body.variants?.length
           ? {

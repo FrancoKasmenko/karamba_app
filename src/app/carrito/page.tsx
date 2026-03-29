@@ -8,6 +8,7 @@ import { useCartStore } from "@/store/cart";
 import { formatPrice } from "@/lib/utils";
 import { resolveStoredProductImage, isLocalUploadPath } from "@/lib/image-url";
 import Button from "@/components/ui/button";
+import toast from "react-hot-toast";
 
 export default function CarritoPage() {
   const { items, removeItem, updateQuantity, total } = useCartStore();
@@ -68,9 +69,22 @@ export default function CarritoPage() {
               <div className="flex items-center gap-3 mt-2">
                 <div className="inline-flex items-center border border-gray-200 rounded-full">
                   <button
-                    onClick={() =>
-                      updateQuantity(item.productId, item.quantity - 1, item.variant)
-                    }
+                    onClick={() => {
+                      const min = Math.max(
+                        1,
+                        Math.floor(Number(item.minPurchaseQuantity) || 1)
+                      );
+                      const ok = updateQuantity(
+                        item.productId,
+                        item.quantity - 1,
+                        item.variant
+                      );
+                      if (!ok) {
+                        toast.error(
+                          `Cantidad mínima para esta línea: ${min} unidades.`
+                        );
+                      }
+                    }}
                     className="p-1.5 text-gray-500 hover:text-primary-dark"
                   >
                     <FiMinus size={14} />

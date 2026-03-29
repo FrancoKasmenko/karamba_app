@@ -80,6 +80,7 @@ export default async function ProductPage({ params }: Props) {
         isOnlineCourse: true,
         onlineCourse: { select: { slug: true } },
         variants: true,
+        minPurchaseQuantity: true,
         category: { select: { name: true, slug: true } },
       },
     });

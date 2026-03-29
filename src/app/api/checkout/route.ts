@@ -105,29 +105,52 @@ export async function POST(req: Request) {
     const payMethodEnum =
       method === "BANK_TRANSFER" ? "BANK_TRANSFER" : "MERCADOPAGO";
 
-    const resolvedItems = (
-      cartItems as {
-        productId: string;
-        name?: string;
-        quantity: number;
-        variant?: string;
-      }[]
-    ).map((item) => {
+    const lineInputs = cartItems as {
+      productId: string;
+      name?: string;
+      quantity: number;
+      variant?: string;
+    }[];
+
+    const resolvedItems: {
+      productId: string;
+      name: string;
+      quantity: number;
+      variant?: string;
+      price: number;
+    }[] = [];
+
+    for (const item of lineInputs) {
       const p = productById.get(item.productId);
       if (!p) {
-        throw new Error("Producto no encontrado");
+        return NextResponse.json(
+          { error: "Producto no encontrado" },
+          { status: 400 }
+        );
       }
       const base = baseUnitFromProduct(p, item.variant);
       const unitCharged = unitPriceForPaymentMethod(base, payMethodEnum);
       const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
-      return {
+      const minPurchase = Math.max(
+        1,
+        Math.floor(Number(p.minPurchaseQuantity)) || 1
+      );
+      if (qty < minPurchase) {
+        return NextResponse.json(
+          {
+            error: `"${p.name}": la cantidad mínima de compra es ${minPurchase} unidades.`,
+          },
+          { status: 400 }
+        );
+      }
+      resolvedItems.push({
         productId: item.productId,
         name: (item.name?.trim() || p.name).slice(0, 500),
         quantity: qty,
         variant: item.variant,
         price: unitCharged,
-      };
-    });
+      });
+    }
 
     const productSubtotal = roundMoney(
       resolvedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)

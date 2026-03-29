@@ -69,6 +69,10 @@ export default function EditProductoPage({
             fileUrl: product.fileUrl as string | null,
             fileName: product.fileName as string | null,
           }),
+          minPurchaseQuantity: String(
+            (product as { minPurchaseQuantity?: number }).minPurchaseQuantity ??
+              1
+          ),
         }}
       />
     </div>

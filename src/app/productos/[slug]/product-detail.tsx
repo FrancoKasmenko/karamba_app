@@ -37,12 +37,14 @@ interface Product {
   category: { name: string; slug: string } | null;
   isDigital: boolean;
   fileName: string | null;
+  minPurchaseQuantity?: number;
 }
 
 export default function ProductDetail({ product }: { product: Product }) {
+  const minQty = Math.max(1, Math.floor(product.minPurchaseQuantity ?? 1) || 1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(minQty);
   const addItem = useCartStore((s) => s.addItem);
 
   const currentPrice = selectedVariant?.price ?? product.price;
@@ -64,6 +66,10 @@ export default function ProductDetail({ product }: { product: Product }) {
   );
 
   const handleAddToCart = () => {
+    if (quantity < minQty) {
+      toast.error(`La cantidad mínima de compra es ${minQty} unidades.`);
+      return;
+    }
     const lineImage = resolveProductImage({
       imageUrl: product.imageUrl,
       images: product.images,
@@ -71,14 +77,21 @@ export default function ProductDetail({ product }: { product: Product }) {
       name: product.name,
       slug: product.slug,
     });
-    addItem({
+    const ok = addItem({
       productId: product.id,
       name: product.name,
       price: currentPrice,
       image: lineImage,
       variant: selectedVariant?.value,
       quantity,
+      minPurchaseQuantity: minQty,
     });
+    if (!ok) {
+      toast.error(
+        `No se puede agregar: el total en el carrito debe ser al menos ${minQty} unidades.`
+      );
+      return;
+    }
     toast.success("Agregado al carrito");
   };
 
@@ -194,15 +207,21 @@ export default function ProductDetail({ product }: { product: Product }) {
             </div>
           ))}
 
-          {/* Quantity */}
-          {!product.isDigital && (
+          {/* Quantity (físicos siempre; digitales solo si hay mínimo > 1) */}
+          {(!product.isDigital || minQty > 1) && (
             <div className="mt-6">
               <h3 className="text-sm font-semibold text-warm-gray mb-2.5">
                 Cantidad
+                {minQty > 1 && (
+                  <span className="font-normal text-gray-500 ml-2">
+                    (mín. {minQty})
+                  </span>
+                )}
               </h3>
               <div className="inline-flex items-center border-2 border-gray-200 rounded-full">
                 <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  type="button"
+                  onClick={() => setQuantity(Math.max(minQty, quantity - 1))}
                   className="p-2.5 text-gray-500 hover:text-primary-dark transition-colors"
                 >
                   <FiMinus size={16} />
@@ -211,6 +230,7 @@ export default function ProductDetail({ product }: { product: Product }) {
                   {quantity}
                 </span>
                 <button
+                  type="button"
                   onClick={() => setQuantity(quantity + 1)}
                   className="p-2.5 text-gray-500 hover:text-primary-dark transition-colors"
                 >

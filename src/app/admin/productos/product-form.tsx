@@ -77,6 +77,8 @@ interface ProductData {
   variants: Variant[];
   isDigital: boolean;
   digitalFiles: DigitalFileRow[];
+  /** Entero >= 1 */
+  minPurchaseQuantity: string;
 }
 
 const defaultProduct: ProductData = {
@@ -92,6 +94,7 @@ const defaultProduct: ProductData = {
   variants: [],
   isDigital: false,
   digitalFiles: [],
+  minPurchaseQuantity: "1",
 };
 
 export default function ProductForm({
@@ -125,6 +128,9 @@ export default function ProductForm({
         ]
       : [],
     imageUrl: (initialData as ProductData | undefined)?.imageUrl ?? "",
+    minPurchaseQuantity:
+      (initialData as ProductData | undefined)?.minPurchaseQuantity ??
+      defaultProduct.minPurchaseQuantity,
   }));
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [uploadingDigital, setUploadingDigital] = useState(false);
@@ -144,6 +150,11 @@ export default function ProductForm({
     e.preventDefault();
     if (form.isDigital && form.digitalFiles.length === 0) {
       toast.error("Subí al menos un archivo del producto digital");
+      return;
+    }
+    const minPQ = Math.floor(Number(form.minPurchaseQuantity));
+    if (!Number.isFinite(minPQ) || minPQ < 1) {
+      toast.error("La cantidad mínima de compra debe ser un entero mayor o igual a 1");
       return;
     }
     setLoading(true);
@@ -169,6 +180,7 @@ export default function ProductForm({
           variants: form.variants,
           isDigital: form.isDigital,
           digitalFiles: form.isDigital ? form.digitalFiles : [],
+          minPurchaseQuantity: form.minPurchaseQuantity,
         }),
       });
 
@@ -361,6 +373,27 @@ export default function ProductForm({
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Cantidad mínima de compra
+            </label>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              required
+              value={form.minPurchaseQuantity}
+              onChange={(e) =>
+                setForm({ ...form, minPurchaseQuantity: e.target.value })
+              }
+              className="w-full max-w-xs px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Por línea (misma variante): no se puede agregar al carrito ni pagar
+              con menos unidades. Por defecto 1.
+            </p>
           </div>
 
           {/* Category selector */}

@@ -8,6 +8,7 @@ import {
   validateDigitalFilesForSave,
 } from "@/lib/product-digital-files";
 import { nextResponseForPrismaSchemaDrift } from "@/lib/prisma-schema-drift-response";
+import { parseMinPurchaseQuantity } from "@/lib/min-purchase-quantity";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -96,6 +97,8 @@ export async function PUT(req: Request, context: RouteContext) {
       }
     }
 
+    const minPurchaseQuantity = parseMinPurchaseQuantity(body.minPurchaseQuantity);
+
     const product = await prisma.product.update({
       where: { id },
       data: {
@@ -104,6 +107,7 @@ export async function PUT(req: Request, context: RouteContext) {
         description: body.description,
         price: parseFloat(body.price),
         comparePrice: body.comparePrice ? parseFloat(body.comparePrice) : null,
+        minPurchaseQuantity,
         images: body.images || [],
         imageUrl: body.imageUrl?.trim() || null,
         featured: body.featured || false,

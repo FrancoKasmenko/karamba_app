@@ -153,6 +153,8 @@ model Product {
   onlineCourse  OnlineCourse? @relation(fields: [onlineCourseId], references: [id], onDelete: SetNull)
   categoryId  String?
   category    Category? @relation(fields: [categoryId], references: [id])
+  /// Cantidad mínima por línea (misma variante) para añadir al carrito y completar compra
+  minPurchaseQuantity Int @default(1)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   variants    Variant[]

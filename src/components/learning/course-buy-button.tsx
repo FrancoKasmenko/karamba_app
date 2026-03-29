@@ -29,13 +29,18 @@ export default function CourseBuyButton({
       name: product.name,
       slug: product.slug,
     });
-    addItem({
+    const ok = addItem({
       productId: product.id,
       name: product.name,
       price: product.price,
       image,
       quantity: 1,
+      minPurchaseQuantity: 1,
     });
+    if (!ok) {
+      toast.error("No se pudo agregar al carrito (cantidad mínima).");
+      return;
+    }
     toast.success("Curso agregado al carrito");
   };
 

@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/admin";
 import { slugify } from "@/lib/utils";
 import { validateDigitalFilesForSave } from "@/lib/product-digital-files";
 import { nextResponseForPrismaSchemaDrift } from "@/lib/prisma-schema-drift-response";
+import { parseMinPurchaseQuantity } from "@/lib/min-purchase-quantity";
 
 export async function GET(req: Request) {
   const { error } = await requireAdmin();
@@ -71,6 +72,7 @@ export async function POST(req: Request) {
       digitalList = v.value;
     }
     const slug = slugify(body.name);
+    const minPurchaseQuantity = parseMinPurchaseQuantity(body.minPurchaseQuantity);
 
     const product = await prisma.product.create({
       data: {
@@ -79,6 +81,7 @@ export async function POST(req: Request) {
         description: body.description,
         price: parseFloat(body.price),
         comparePrice: body.comparePrice ? parseFloat(body.comparePrice) : null,
+        minPurchaseQuantity,
         images: body.images || [],
         imageUrl: body.imageUrl?.trim() || null,
         featured: body.featured || false,

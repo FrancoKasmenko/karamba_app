@@ -13,28 +13,37 @@ import {
   mercadoPagoAbsoluteUrl,
 } from "@/lib/base-url";
 import { fireAndForget, notifyOrderCreated } from "@/lib/email-events";
+import { roundMoney } from "@/lib/product-pricing";
+import { completeCartForOrder } from "@/lib/analytics-cart-server";
 import {
-  roundMoney,
-  unitPriceForPaymentMethod,
-} from "@/lib/product-pricing";
-import type { Product, Variant } from "@prisma/client";
-import {
-  applyProportionalDiscountToLines,
-  validateCouponForCart,
-  type CartLineInput,
-} from "@/lib/coupon-checkout";
+  mergeCheckoutShippingNotes,
+  resolveProductCheckout,
+  type CheckoutLineInput,
+  type CheckoutShippingContext,
+} from "@/lib/checkout-cart-resolve";
+import { parseBodyPaymentMethod } from "@/lib/checkout-payment-method";
 
-type ProductWithVariants = Product & { variants: Variant[] };
-
-function baseUnitFromProduct(
-  product: ProductWithVariants,
-  variantValue?: string | null
-): number {
-  if (variantValue) {
-    const v = product.variants.find((x) => x.value === variantValue);
-    if (v && v.price != null) return roundMoney(v.price);
+function bodyToShippingContext(shipping: {
+  delivery?: string;
+  departamento?: string;
+  city?: string;
+}): CheckoutShippingContext {
+  const del = shipping?.delivery;
+  if (del === "digital") {
+    return { delivery: "digital", departamento: "—", city: "" };
   }
-  return roundMoney(product.price);
+  if (del === "pickup") {
+    return {
+      delivery: "pickup",
+      departamento: String(shipping?.departamento ?? "Montevideo"),
+      city: String(shipping?.city ?? ""),
+    };
+  }
+  return {
+    delivery: "shipping",
+    departamento: String(shipping?.departamento ?? "Montevideo"),
+    city: String(shipping?.city ?? ""),
+  };
 }
 
 export async function POST(req: Request) {
@@ -48,10 +57,19 @@ export async function POST(req: Request) {
     const {
       items,
       shipping,
-      paymentMethod,
+      paymentMethod: rawPaymentMethod,
       paymentAccountId,
       couponCode: rawCouponCode,
+      analyticsSessionId,
     } = body;
+
+    const sessionIdForCart =
+      typeof analyticsSessionId === "string" &&
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        analyticsSessionId.trim()
+      )
+        ? analyticsSessionId.trim()
+        : null;
 
     if (!items || items.length === 0) {
       return NextResponse.json(
@@ -60,143 +78,59 @@ export async function POST(req: Request) {
       );
     }
 
-    const method =
-      paymentMethod === "BANK_TRANSFER" ? "BANK_TRANSFER" : "MERCADOPAGO";
-
-    const cartItems = items as { productId?: string }[];
-    const lineProductIds: string[] = [
-      ...new Set(
-        cartItems
-          .map((i) => i.productId)
-          .filter(
-            (id): id is string => typeof id === "string" && id.length > 0
-          )
-      ),
-    ];
-
-    if (lineProductIds.length === 0) {
+    const payMethodEnum = parseBodyPaymentMethod(rawPaymentMethod);
+    if (!payMethodEnum) {
       return NextResponse.json(
-        { error: "Productos inválidos" },
+        { error: "Método de pago no válido" },
         { status: 400 }
       );
     }
 
-    const dbProducts = await prisma.product.findMany({
-      where: { id: { in: lineProductIds } },
-      include: { variants: true },
+    if (payMethodEnum === "PAYPAL") {
+      return NextResponse.json(
+        {
+          error:
+            "Para pagar con PayPal usá el botón «Pagar con PayPal» en el checkout.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const lineInputs = items as CheckoutLineInput[];
+
+    const shippingCtx = bodyToShippingContext(
+      (shipping ?? {}) as {
+        delivery?: string;
+        departamento?: string;
+        city?: string;
+      }
+    );
+
+    const resolved = await resolveProductCheckout({
+      items: lineInputs,
+      shipping: shippingCtx,
+      rawCouponCode,
+      paymentMethod: payMethodEnum,
     });
 
-    if (dbProducts.length !== lineProductIds.length) {
+    if (!resolved.ok) {
       return NextResponse.json(
-        { error: "Producto no encontrado" },
-        { status: 400 }
+        { error: resolved.error },
+        { status: resolved.status }
       );
     }
 
-    const productById = new Map(dbProducts.map((p) => [p.id, p]));
-
-    const skipPhysicalDelivery = dbProducts.every(
-      (p) => p.isOnlineCourse || p.isDigital
+    const data = resolved.data;
+    const notesMerged = mergeCheckoutShippingNotes(
+      shipping?.notes,
+      data.shippingZoneName,
+      data.shippingPendingManualQuote
     );
-
-    const requestedShipping = Math.max(0, Number(shipping?.shippingCost) || 0);
-    const shippingCost = skipPhysicalDelivery ? 0 : requestedShipping;
-
-    const payMethodEnum =
-      method === "BANK_TRANSFER" ? "BANK_TRANSFER" : "MERCADOPAGO";
-
-    const lineInputs = cartItems as {
-      productId: string;
-      name?: string;
-      quantity: number;
-      variant?: string;
-    }[];
-
-    const resolvedItems: {
-      productId: string;
-      name: string;
-      quantity: number;
-      variant?: string;
-      price: number;
-    }[] = [];
-
-    for (const item of lineInputs) {
-      const p = productById.get(item.productId);
-      if (!p) {
-        return NextResponse.json(
-          { error: "Producto no encontrado" },
-          { status: 400 }
-        );
-      }
-      const base = baseUnitFromProduct(p, item.variant);
-      const unitCharged = unitPriceForPaymentMethod(base, payMethodEnum);
-      const qty = Math.max(1, Math.floor(Number(item.quantity) || 1));
-      const minPurchase = Math.max(
-        1,
-        Math.floor(Number(p.minPurchaseQuantity)) || 1
-      );
-      if (qty < minPurchase) {
-        return NextResponse.json(
-          {
-            error: `"${p.name}": la cantidad mínima de compra es ${minPurchase} unidades.`,
-          },
-          { status: 400 }
-        );
-      }
-      resolvedItems.push({
-        productId: item.productId,
-        name: (item.name?.trim() || p.name).slice(0, 500),
-        quantity: qty,
-        variant: item.variant,
-        price: unitCharged,
-      });
-    }
-
-    const productSubtotal = roundMoney(
-      resolvedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    );
-
-    const couponLines: CartLineInput[] = resolvedItems.map((r) => ({
-      productId: r.productId,
-      quantity: r.quantity,
-      variant: r.variant,
-    }));
-
-    const couponCheck = await validateCouponForCart(
-      rawCouponCode,
-      payMethodEnum,
-      couponLines,
-      productById
-    );
-    if (!couponCheck.ok) {
-      return NextResponse.json({ error: couponCheck.error }, { status: 400 });
-    }
-
-    const chargedItems = applyProportionalDiscountToLines(
-      resolvedItems,
-      productSubtotal,
-      couponCheck.discount
-    );
-    const newSubtotal = roundMoney(
-      chargedItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    );
-    const couponDiscountRecorded = roundMoney(productSubtotal - newSubtotal);
-
-    const orderItemsPayload = chargedItems.map((item) => ({
-      itemType: "PRODUCT" as const,
-      productId: item.productId,
-      productName: item.name,
-      price: item.price,
-      quantity: item.quantity,
-      variant: item.variant,
-    }));
-
-    const couponCodeStored = couponCheck.code ? couponCheck.code : null;
 
     let mercadoPagoClient: Awaited<
       ReturnType<typeof getMercadoPagoClient>
     > = null;
-    if (method !== "BANK_TRANSFER") {
+    if (payMethodEnum !== "BANK_TRANSFER") {
       mercadoPagoClient = await getMercadoPagoClient();
       if (!mercadoPagoClient) {
         return NextResponse.json(
@@ -209,7 +143,7 @@ export async function POST(req: Request) {
       }
     }
 
-    if (method === "BANK_TRANSFER") {
+    if (payMethodEnum === "BANK_TRANSFER") {
       if (!paymentAccountId || typeof paymentAccountId !== "string") {
         return NextResponse.json(
           { error: "Seleccioná una cuenta para transferir" },
@@ -228,7 +162,7 @@ export async function POST(req: Request) {
         );
       }
 
-      const finalTotal = newSubtotal + shippingCost;
+      const finalTotal = roundMoney(data.newSubtotal + data.shippingCost);
 
       const noteExtra = `\n[Pago: transferencia → ${acc.bankName} · ${acc.holderName} · ${acc.accountNumber}]`;
       const order = await prisma.order.create({
@@ -245,16 +179,25 @@ export async function POST(req: Request) {
           shippingAddress: shipping.address,
           shippingCity: shipping.city,
           shippingPhone: shipping.phone,
-          notes: (shipping.notes || "") + noteExtra,
-          couponCode: couponCodeStored,
-          couponDiscount: couponDiscountRecorded,
+          notes: (notesMerged + noteExtra).trim(),
+          couponCode: data.couponCodeStored,
+          couponDiscount: data.couponDiscountRecorded,
           items: {
-            create: orderItemsPayload,
+            create: data.orderItemsPayload,
           },
         },
       });
 
       console.log(`[CHECKOUT TRANSFER] Orden ${order.id} | ${finalTotal}`);
+
+      if (sessionIdForCart) {
+        await completeCartForOrder({
+          sessionId: sessionIdForCart,
+          orderId: order.id,
+          userId: session.user.id,
+          total: finalTotal,
+        }).catch(() => {});
+      }
 
       return NextResponse.json({
         orderId: order.id,
@@ -262,7 +205,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const finalTotal = newSubtotal + shippingCost;
+    const finalTotal = roundMoney(data.newSubtotal + data.shippingCost);
 
     const order = await prisma.order.create({
       data: {
@@ -275,22 +218,31 @@ export async function POST(req: Request) {
         shippingAddress: shipping.address,
         shippingCity: shipping.city,
         shippingPhone: shipping.phone,
-        notes: shipping.notes,
-        couponCode: couponCodeStored,
-        couponDiscount: couponDiscountRecorded,
+        notes: notesMerged || null,
+        couponCode: data.couponCodeStored,
+        couponDiscount: data.couponDiscountRecorded,
         items: {
-          create: orderItemsPayload,
+          create: data.orderItemsPayload,
         },
       },
     });
 
     console.log(`[CHECKOUT] Orden creada: ${order.id} | Total: $${finalTotal}`);
 
+    if (sessionIdForCart) {
+      await completeCartForOrder({
+        sessionId: sessionIdForCart,
+        orderId: order.id,
+        userId: session.user.id,
+        total: finalTotal,
+      }).catch(() => {});
+    }
+
     fireAndForget(notifyOrderCreated(order.id));
 
     const preference = new Preference(mercadoPagoClient!);
 
-    const mpItems = chargedItems.map((item, idx: number) => ({
+    const mpItems = data.chargedItems.map((item, idx: number) => ({
       id: `item-${idx}`,
       title: item.name,
       unit_price: Number(item.price),
@@ -298,11 +250,11 @@ export async function POST(req: Request) {
       currency_id: "UYU",
     }));
 
-    if (shippingCost > 0) {
+    if (data.shippingCost > 0) {
       mpItems.push({
         id: "shipping",
         title: "Costo de envío",
-        unit_price: Number(shippingCost),
+        unit_price: Number(data.shippingCost),
         quantity: 1,
         currency_id: "UYU",
       });
@@ -356,7 +308,7 @@ export async function POST(req: Request) {
         detail
       );
       const hint = urlIssue
-        ? "Mercado Pago exige URLs HTTPS públicas: definí BASE_URL o NEXT_PUBLIC_SITE_URL con https://tudominio.com (sin barra final). En local usá una URL HTTPS de ngrok."
+        ? "Mercado Pago exige URLs HTTPS públicas: definí BASE_URL o NEXT_PUBLIC_SITE_URL con https://karamba.com.uy (sin barra final). En local usá una URL HTTPS de ngrok."
         : "Si el error no es de URLs: en Admin → Pagos usá solo el Access token de producción (no la Public key en ese campo).";
       return NextResponse.json(
         {

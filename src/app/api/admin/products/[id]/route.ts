@@ -9,9 +9,16 @@ import {
 } from "@/lib/product-digital-files";
 import { nextResponseForPrismaSchemaDrift } from "@/lib/prisma-schema-drift-response";
 import { parseMinPurchaseQuantity } from "@/lib/min-purchase-quantity";
+import { normalizeProductCategoryIds } from "@/lib/product-category-ids";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
+}
+
+async function assertCategoryIdsExist(ids: string[]): Promise<boolean> {
+  if (ids.length === 0) return true;
+  const n = await prisma.category.count({ where: { id: { in: ids } } });
+  return n === ids.length;
 }
 
 export async function GET(_req: Request, context: RouteContext) {
@@ -22,7 +29,7 @@ export async function GET(_req: Request, context: RouteContext) {
   try {
     const product = await prisma.product.findUnique({
       where: { id },
-      include: { variants: true, category: true },
+      include: { variants: true, categories: true },
     });
 
     if (!product) {
@@ -49,6 +56,15 @@ export async function PUT(req: Request, context: RouteContext) {
 
   try {
     const body = await req.json();
+
+    const categoryIds = normalizeProductCategoryIds(body);
+    const categoriesOk = await assertCategoryIdsExist(categoryIds);
+    if (!categoriesOk) {
+      return NextResponse.json(
+        { error: "Una o más categorías no existen" },
+        { status: 400 }
+      );
+    }
 
     const existing = await prisma.product.findUnique({
       where: { id },
@@ -116,7 +132,9 @@ export async function PUT(req: Request, context: RouteContext) {
         digitalFiles: isDigital ? nextDigital : Prisma.DbNull,
         fileUrl: isDigital ? nextDigital[0]?.fileUrl ?? null : null,
         fileName: isDigital ? nextDigital[0]?.fileName ?? null : null,
-        categoryId: body.categoryId || null,
+        categories: {
+          set: categoryIds.map((cid) => ({ id: cid })),
+        },
         variants: body.variants?.length
           ? {
               create: body.variants.map(
@@ -130,7 +148,7 @@ export async function PUT(req: Request, context: RouteContext) {
             }
           : undefined,
       },
-      include: { variants: true },
+      include: { variants: true, categories: true },
     });
 
     return NextResponse.json(product);

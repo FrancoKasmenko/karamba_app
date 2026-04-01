@@ -3,7 +3,10 @@ import { prisma } from "@/lib/prisma";
 import { roundMoney, unitPriceForPaymentMethod } from "@/lib/product-pricing";
 import type { OrderStatus } from "@prisma/client";
 
-type ProductWithVariants = Product & { variants: Variant[] };
+type ProductWithVariants = Product & {
+  variants: Variant[];
+  categories: { id: string }[];
+};
 
 function baseUnitFromProduct(
   product: ProductWithVariants,
@@ -60,6 +63,18 @@ function productMatchesCouponCategories(
   const chain = chainMap.get(productCategoryId);
   if (!chain) return allowedIds.includes(productCategoryId);
   return allowedIds.some((aid) => chain.has(aid));
+}
+
+function lineMatchesCouponCategories(
+  productCategoryIds: string[],
+  allowedIds: string[],
+  chainMap: Map<string, Set<string>>
+): boolean {
+  if (allowedIds.length === 0) return true;
+  if (productCategoryIds.length === 0) return false;
+  return productCategoryIds.some((cid) =>
+    productMatchesCouponCategories(cid, allowedIds, chainMap)
+  );
 }
 
 export type CartLineInput = {
@@ -119,13 +134,8 @@ export async function validateCouponForCart(
     if (coupon.excludeOnSale && isOnSaleProduct(p, line.variant)) {
       continue;
     }
-    if (
-      !productMatchesCouponCategories(
-        p.categoryId,
-        coupon.categoryIds,
-        chainMap
-      )
-    ) {
+    const pCatIds = p.categories.map((c) => c.id);
+    if (!lineMatchesCouponCategories(pCatIds, coupon.categoryIds, chainMap)) {
       continue;
     }
     const base = baseUnitFromProduct(p, line.variant);
@@ -141,6 +151,17 @@ export async function validateCouponForCart(
     };
   }
 
+  const minPurchase =
+    coupon.minPurchaseAmount != null && coupon.minPurchaseAmount > 0
+      ? roundMoney(coupon.minPurchaseAmount)
+      : null;
+  if (minPurchase != null && eligible < minPurchase) {
+    return {
+      ok: false,
+      error: `El subtotal elegible debe ser al menos $${minPurchase} para usar este cupón`,
+    };
+  }
+
   let discount = 0;
   if (coupon.discountType === "PERCENT") {
     const pct = Math.min(100, Math.max(0, coupon.percentOff ?? 0));
@@ -149,6 +170,15 @@ export async function validateCouponForCart(
     const amt = Math.max(0, coupon.amountOff ?? 0);
     discount = roundMoney(Math.min(amt, eligible));
   }
+
+  const maxDisc =
+    coupon.maxDiscountAmount != null && coupon.maxDiscountAmount > 0
+      ? roundMoney(coupon.maxDiscountAmount)
+      : null;
+  if (maxDisc != null) {
+    discount = roundMoney(Math.min(discount, maxDisc));
+  }
+  discount = roundMoney(Math.min(discount, eligible));
 
   return { ok: true, discount, code: coupon.code };
 }

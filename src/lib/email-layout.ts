@@ -217,7 +217,7 @@ export function emailP(html: string, extraStyle = ""): string {
 /** Caja suave (info transferencia, avisos) */
 export function emailCallout(
   innerHtml: string,
-  variant: "amber" | "lila" | "celeste" = "lila"
+  variant: "amber" | "lila" | "celeste" | "mint" = "lila"
 ): string {
   const map = {
     amber: {
@@ -234,6 +234,11 @@ export function emailCallout(
       bg: emailStyles.celesteSoft,
       border: emailStyles.celesteBorder,
       color: "#0369a1",
+    },
+    mint: {
+      bg: "#ecfdf5",
+      border: "#a7f3d0",
+      color: "#065f46",
     },
   } as const;
   const v = map[variant];

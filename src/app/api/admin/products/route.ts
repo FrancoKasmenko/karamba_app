@@ -6,6 +6,13 @@ import { slugify } from "@/lib/utils";
 import { validateDigitalFilesForSave } from "@/lib/product-digital-files";
 import { nextResponseForPrismaSchemaDrift } from "@/lib/prisma-schema-drift-response";
 import { parseMinPurchaseQuantity } from "@/lib/min-purchase-quantity";
+import { normalizeProductCategoryIds } from "@/lib/product-category-ids";
+
+async function assertCategoryIdsExist(ids: string[]): Promise<boolean> {
+  if (ids.length === 0) return true;
+  const n = await prisma.category.count({ where: { id: { in: ids } } });
+  return n === ids.length;
+}
 
 export async function GET(req: Request) {
   const { error } = await requireAdmin();
@@ -25,7 +32,7 @@ export async function GET(req: Request) {
 
     const products = await prisma.product.findMany({
       where,
-      include: { variants: true, category: true },
+      include: { variants: true, categories: true },
       orderBy: { createdAt: "desc" },
     });
     return NextResponse.json(products);
@@ -52,6 +59,15 @@ export async function POST(req: Request) {
           error:
             "Los cursos online se crean desde Admin → Cursos online (el producto se genera solo).",
         },
+        { status: 400 }
+      );
+    }
+
+    const categoryIds = normalizeProductCategoryIds(body);
+    const categoriesOk = await assertCategoryIdsExist(categoryIds);
+    if (!categoriesOk) {
+      return NextResponse.json(
+        { error: "Una o más categorías no existen" },
         { status: 400 }
       );
     }
@@ -90,7 +106,13 @@ export async function POST(req: Request) {
         digitalFiles: isDigital ? digitalList : Prisma.DbNull,
         fileUrl: isDigital ? digitalList[0]?.fileUrl ?? null : null,
         fileName: isDigital ? digitalList[0]?.fileName ?? null : null,
-        categoryId: body.categoryId || null,
+        ...(categoryIds.length > 0
+          ? {
+              categories: {
+                connect: categoryIds.map((id) => ({ id })),
+              },
+            }
+          : {}),
         variants: body.variants?.length
           ? {
               create: body.variants.map(
@@ -104,7 +126,7 @@ export async function POST(req: Request) {
             }
           : undefined,
       },
-      include: { variants: true },
+      include: { variants: true, categories: true },
     });
 
     return NextResponse.json(product);

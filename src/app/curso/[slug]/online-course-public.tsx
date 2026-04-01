@@ -5,6 +5,7 @@ import { formatPrice } from "@/lib/utils";
 import { levelLabel } from "@/lib/online-course-labels";
 import Button from "@/components/ui/button";
 import { CourseBuyActions } from "@/components/learning/course-buy-button";
+import { DescriptionText } from "@/components/ui/description-text";
 
 type CourseIn = {
   id: string;
@@ -96,11 +97,12 @@ export default function OnlineCoursePublic({
           <p className="text-2xl font-bold text-primary-dark">
             {formatPrice(salePrice)}
           </p>
-          {course.description && (
-            <div className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">
-              {course.description}
-            </div>
-          )}
+          <DescriptionText
+            className="text-sm text-gray-600 leading-relaxed"
+            as="div"
+          >
+            {course.description}
+          </DescriptionText>
 
           <div className="flex flex-wrap gap-3 pt-2">
             {hasAccess ? (

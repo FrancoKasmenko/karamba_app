@@ -68,7 +68,7 @@ interface TransferAccount {
 interface Order {
   id: string;
   source?: "PRODUCT" | "COURSE";
-  checkoutPaymentMethod?: "MERCADOPAGO" | "BANK_TRANSFER";
+  checkoutPaymentMethod?: "MERCADOPAGO" | "BANK_TRANSFER" | "PAYPAL";
   transferReceiptUrl?: string | null;
   transferReceiptStatus?: "NONE" | "PENDING" | "VALIDATED";
   transferReceiptAt?: string | null;
@@ -658,7 +658,9 @@ export default function OrderDetailPage({
                 <span className="text-gray-700 text-right font-medium">
                   {order.checkoutPaymentMethod === "BANK_TRANSFER"
                     ? "Transferencia"
-                    : "Mercado Pago"}
+                    : order.checkoutPaymentMethod === "PAYPAL"
+                      ? "PayPal"
+                      : "Mercado Pago"}
                 </span>
               </div>
               {order.checkoutPaymentMethod === "BANK_TRANSFER" &&
@@ -742,7 +744,8 @@ export default function OrderDetailPage({
                 )}
               </div>
             )}
-            {order.paymentId && order.checkoutPaymentMethod !== "BANK_TRANSFER" && (
+            {order.paymentId &&
+              order.checkoutPaymentMethod === "MERCADOPAGO" && (
               <button
                 onClick={handleSyncPayment}
                 disabled={syncing}

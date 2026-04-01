@@ -339,7 +339,7 @@ export async function GET(_req: Request, context: RouteContext) {
   <div class="footer">
     <p class="thanks">¡Gracias por tu compra!</p>
     <p>Karamba – Tienda Creativa · Uruguay</p>
-    <p>www.karamba.com.uy · Instagram: @karamba</p>
+    <p>karamba.com.uy · Instagram: @karamba</p>
   </div>
 </body>
 </html>`;

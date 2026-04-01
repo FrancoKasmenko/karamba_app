@@ -130,7 +130,9 @@ export default function DashboardClient() {
     <div className="space-y-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl font-extrabold text-warm-gray">Dashboard</h1>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-warm-gray">
+            Dashboard
+          </h1>
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
@@ -147,10 +149,10 @@ export default function DashboardClient() {
                 key={k}
                 type="button"
                 onClick={() => setPreset(k)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-colors ${
+                className={`min-h-[40px] sm:min-h-0 px-3 py-2 sm:py-1.5 text-xs font-semibold rounded-full transition-colors touch-manipulation ${
                   preset === k
                     ? "bg-primary text-white shadow-sm"
-                    : "bg-soft-gray text-gray-600 hover:bg-primary-light/30"
+                    : "bg-soft-gray text-gray-600 hover:bg-primary-light/30 active:bg-primary-light/40"
                 }`}
               >
                 {label}

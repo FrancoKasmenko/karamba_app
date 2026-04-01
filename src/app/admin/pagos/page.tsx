@@ -18,6 +18,12 @@ interface Settings {
   mercadoPagoTokenConfigured?: boolean;
   mercadoPagoPublicKey: string | null;
   mercadoPagoEnabled: boolean;
+  paypalEnabled?: boolean;
+  paypalClientId?: string | null;
+  paypalSecretConfigured?: boolean;
+  paypalEnvironment?: string | null;
+  paypalCurrency?: string | null;
+  paypalClientSecret?: string | null;
 }
 
 export default function AdminPagosPage() {
@@ -30,6 +36,11 @@ export default function AdminPagosPage() {
     accessToken: "",
     publicKey: "",
     enabled: false,
+    paypalClientId: "",
+    paypalSecret: "",
+    paypalEnabled: false,
+    paypalEnvironment: "sandbox" as "sandbox" | "live",
+    paypalCurrency: "UYU",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,6 +60,12 @@ export default function AdminPagosPage() {
           accessToken: "",
           publicKey: data.mercadoPagoPublicKey || "",
           enabled: Boolean(data.mercadoPagoEnabled),
+          paypalClientId: data.paypalClientId || "",
+          paypalSecret: "",
+          paypalEnabled: Boolean(data.paypalEnabled),
+          paypalEnvironment:
+            data.paypalEnvironment === "live" ? "live" : "sandbox",
+          paypalCurrency: (data.paypalCurrency || "UYU").toUpperCase(),
         });
         setLoading(false);
       })
@@ -77,6 +94,18 @@ export default function AdminPagosPage() {
         payload.mercadoPagoAccessToken = trimmedToken;
       }
 
+      payload.paypalEnabled = form.paypalEnabled;
+      payload.paypalEnvironment = form.paypalEnvironment;
+      payload.paypalCurrency = form.paypalCurrency.trim().toUpperCase() || "UYU";
+      const pc = form.paypalClientId.trim();
+      if (pc.length > 0) {
+        payload.paypalClientId = pc;
+      }
+      const ps = form.paypalSecret.trim();
+      if (ps.length > 0) {
+        payload.paypalClientSecret = ps;
+      }
+
       const res = await fetch(api("/api/admin/settings"), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -95,6 +124,12 @@ export default function AdminPagosPage() {
         accessToken: "",
         publicKey: data.mercadoPagoPublicKey || "",
         enabled: Boolean(data.mercadoPagoEnabled),
+        paypalSecret: "",
+        paypalClientId: data.paypalClientId || f.paypalClientId,
+        paypalEnabled: Boolean(data.paypalEnabled),
+        paypalEnvironment:
+          data.paypalEnvironment === "live" ? "live" : "sandbox",
+        paypalCurrency: (data.paypalCurrency || "UYU").toUpperCase(),
       }));
       toast.success("Configuración de pagos guardada");
     } catch {
@@ -116,15 +151,20 @@ export default function AdminPagosPage() {
   const tokenOk =
     settings.mercadoPagoTokenConfigured ?? Boolean(settings.mercadoPagoAccessToken);
   const isActive = settings.mercadoPagoEnabled && tokenOk;
+  const paypalSecretOk = settings.paypalSecretConfigured === true;
+  const paypalActive =
+    Boolean(settings.paypalEnabled) &&
+    Boolean((settings.paypalClientId || "").trim()) &&
+    paypalSecretOk;
   const isNgrok = webhookUrl.includes("ngrok");
 
   return (
     <div>
       <h1 className="font-display text-2xl font-bold text-warm-gray mb-1">
-        Mercado Pago
+        Pagos
       </h1>
       <p className="text-sm text-gray-500 mb-6">
-        Credenciales y webhook. Las cuentas para transferencias están en{" "}
+        Mercado Pago, PayPal y webhook. Las cuentas para transferencias están en{" "}
         <Link href="/admin/cuentas-pago" className="text-primary-dark font-semibold hover:underline">
           Cuentas de pago
         </Link>
@@ -267,6 +307,126 @@ export default function AdminPagosPage() {
             </label>
           </div>
 
+          <div className="pt-6 mt-6 border-t border-gray-100">
+            <div className="flex items-center gap-3 mb-4">
+              <FiGlobe size={18} className="text-indigo-600" />
+              <h2 className="font-display text-lg font-semibold text-gray-800">
+                PayPal
+              </h2>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">
+              Checkout con PayPal (Orders API). El{" "}
+              <strong>Client ID</strong> es público en el navegador; el{" "}
+              <strong>Secret</strong> solo en el servidor. Sandbox vs live según
+              el entorno en developer.paypal.com.
+            </p>
+            <div
+              className={`rounded-xl p-4 mb-4 text-sm ${
+                paypalActive
+                  ? "bg-indigo-50 border border-indigo-100 text-indigo-900"
+                  : "bg-amber-50 border border-amber-100 text-amber-900"
+              }`}
+            >
+              {paypalActive ? (
+                <p className="font-medium">PayPal activo en checkout</p>
+              ) : (
+                <p>
+                  Completá Client ID, Secret y activá el checkbox para mostrar
+                  «Pagar con PayPal».
+                </p>
+              )}
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client ID
+                </label>
+                <input
+                  type="text"
+                  value={form.paypalClientId}
+                  onChange={(e) =>
+                    setForm({ ...form, paypalClientId: e.target.value })
+                  }
+                  placeholder="AX… o A… (sandbox o live)"
+                  autoComplete="off"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client Secret
+                </label>
+                {paypalSecretOk && !form.paypalSecret && (
+                  <p className="text-xs text-green-700 bg-green-50 border border-green-100 rounded-lg px-3 py-2 mb-2">
+                    Ya hay un secret guardado. Dejá vacío para conservarlo o pegá
+                    uno nuevo.
+                  </p>
+                )}
+                <input
+                  type="password"
+                  value={form.paypalSecret}
+                  onChange={(e) =>
+                    setForm({ ...form, paypalSecret: e.target.value })
+                  }
+                  placeholder={paypalSecretOk ? "Nuevo secret (opcional)" : "Secret"}
+                  autoComplete="off"
+                  className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm font-mono"
+                />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Entorno
+                  </label>
+                  <select
+                    value={form.paypalEnvironment}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        paypalEnvironment: e.target.value as "sandbox" | "live",
+                      })
+                    }
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm"
+                  >
+                    <option value="sandbox">Sandbox</option>
+                    <option value="live">Live (producción)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Moneda (PayPal)
+                  </label>
+                  <input
+                    type="text"
+                    value={form.paypalCurrency}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        paypalCurrency: e.target.value.toUpperCase(),
+                      })
+                    }
+                    placeholder="UYU o USD"
+                    maxLength={8}
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-mono uppercase"
+                  />
+                </div>
+              </div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.paypalEnabled}
+                  onChange={(e) =>
+                    setForm({ ...form, paypalEnabled: e.target.checked })
+                  }
+                  className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-5 h-5"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  Activar PayPal en checkout
+                </span>
+              </label>
+            </div>
+          </div>
+
           <div className="mt-5">
             <Button type="submit" disabled={saving} size="lg">
               {saving ? "Guardando..." : "Guardar Configuración"}
@@ -289,7 +449,11 @@ export default function AdminPagosPage() {
             <strong>https://</strong> en producción: la variable{" "}
             <code className="bg-soft-gray px-1 rounded">BASE_URL</code> o{" "}
             <code className="bg-soft-gray px-1 rounded">NEXT_PUBLIC_SITE_URL</code>{" "}
-            debe ser tu dominio con HTTPS (sin barra final).
+            debe ser tu dominio con HTTPS (sin barra final), por ejemplo{" "}
+            <code className="bg-soft-gray px-1 rounded">
+              https://karamba.com.uy
+            </code>
+            .
           </p>
 
           {webhookUrl ? (
@@ -342,6 +506,16 @@ export default function AdminPagosPage() {
 
         {/* Setup guide */}
         <div className="bg-beige rounded-2xl p-5">
+          <p className="text-xs text-gray-500 mb-3">
+            En el VPS con dominio, en <code className="bg-white px-1 rounded">.env</code>{" "}
+            usá{" "}
+            <code className="bg-white px-1 rounded">
+              BASE_URL=&quot;https://karamba.com.uy&quot;
+            </code>{" "}
+            (y el mismo host en{" "}
+            <code className="bg-white px-1 rounded">NEXT_PUBLIC_SITE_URL</code> /{" "}
+            <code className="bg-white px-1 rounded">NEXTAUTH_URL</code>).
+          </p>
           <h3 className="font-semibold text-warm-gray mb-3 text-sm">
             Cómo probar webhooks en local
           </h3>

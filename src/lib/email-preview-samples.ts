@@ -57,16 +57,21 @@ export function getEmailPreviewSamples(
     {
       key: "welcome",
       label: "Bienvenida",
-      description: "Tras registrarse en el sitio.",
+      description:
+        "Tras registrarse. Si en Configuración hay cupón de bienvenida, el mail real lo incluye.",
       html: emailShell({
         documentTitle: "Bienvenida — Karamba (vista previa)",
-        preheader: "Tu cuenta ya está lista",
+        preheader: "Tenés un cupón de bienvenida (ejemplo)",
         heading: "Bienvenido a Karamba",
         subtitle: "Nos encanta tenerte del otro lado.",
         bodyHtml: `
       ${emailP(`Hola ${greet},`)}
       ${emailP(
         `Ya podés <strong>explorar productos</strong>, armar tu carrito y acceder a <strong>tus pedidos y cursos</strong> desde tu perfil cuando quieras.`
+      )}
+      ${emailCallout(
+        `<strong>Regalo por ser cliente nuevo:</strong> en tu primera compra podés usar el cupón <span style="font-family:ui-monospace,monospace;font-size:15px;font-weight:700;letter-spacing:0.04em;">EJEMPLO10</span> en el checkout. <em>(Vista previa: el código real lo definís en Admin → Configuración.)</em>`,
+        "mint"
       )}
       ${emailP(
         `Si necesitás ayuda en cualquier momento, <strong>estamos para ayudarte</strong>: escribinos a <a href="mailto:contacto@karamba.com.uy" style="color:#ec4899;font-weight:600;">contacto@karamba.com.uy</a>.`

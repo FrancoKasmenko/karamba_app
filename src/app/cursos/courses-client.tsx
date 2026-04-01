@@ -8,6 +8,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { FiCalendar, FiClock, FiUsers } from "react-icons/fi";
 import { formatPrice } from "@/lib/utils";
+import { DescriptionText } from "@/components/ui/description-text";
 
 interface CourseSession {
   id: string;
@@ -128,11 +129,12 @@ export default function CoursesClient() {
                           {course.title}
                         </h3>
 
-                        {course.description && (
-                          <p className="mt-2 text-sm text-gray-500 line-clamp-2">
-                            {course.description}
-                          </p>
-                        )}
+                        <DescriptionText
+                          className="mt-2 text-sm text-gray-500 line-clamp-2"
+                          as="p"
+                        >
+                          {course.description}
+                        </DescriptionText>
 
                         <div className="mt-4 flex flex-wrap items-center gap-3 text-xs text-gray-400">
                           {course.duration && (

@@ -132,7 +132,6 @@ export async function POST(req: Request) {
           fileName: null,
           isOnlineCourse: true,
           onlineCourseId: course.id,
-          categoryId: null,
         },
       });
 

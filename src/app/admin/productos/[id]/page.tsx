@@ -49,7 +49,9 @@ export default function EditProductoPage({
           imageUrl: (product.imageUrl as string) || "",
           featured: product.featured as boolean,
           active: product.active as boolean,
-          categoryId: (product.categoryId as string) || "",
+          categoryIds: Array.isArray(product.categories)
+            ? (product.categories as { id: string }[]).map((c) => c.id)
+            : [],
           variants: (
             product.variants as {
               name: string;

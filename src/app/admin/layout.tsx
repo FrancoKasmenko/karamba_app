@@ -29,10 +29,5 @@ export default async function AdminLayout({
     redirect("/perfil?admin2fa=1");
   }
 
-  return (
-    <div className="flex min-h-[calc(100vh-4rem)] bg-cream/50">
-      <AdminSidebar />
-      <div className="flex-1 p-5 sm:p-8 lg:p-10 overflow-auto">{children}</div>
-    </div>
-  );
+  return <AdminSidebar>{children}</AdminSidebar>;
 }

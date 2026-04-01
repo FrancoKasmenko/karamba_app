@@ -175,7 +175,7 @@ async function main() {
       imageUrl: "/api/uploads/products/009b0cb6-831b-45f2-a947-53c4e63d8036.png",
       images: ["/api/uploads/products/009b0cb6-831b-45f2-a947-53c4e63d8036.png"],
       featured: true,
-      categoryId: velas.id,
+      categoryIds: [velas.id],
       variants: [
         { name: "Tama\u00f1o", value: "Peque\u00f1a", stock: 10 },
         { name: "Tama\u00f1o", value: "Mediana", stock: 8 },
@@ -191,7 +191,7 @@ async function main() {
       imageUrl: "/api/uploads/products/00d5236f-d10f-4272-902d-2e3859b016e6.png",
       images: ["/api/uploads/products/00d5236f-d10f-4272-902d-2e3859b016e6.png"],
       featured: true,
-      categoryId: velas.id,
+      categoryIds: [velas.id],
       variants: [
         { name: "Tama\u00f1o", value: "Peque\u00f1a", stock: 15 },
         { name: "Tama\u00f1o", value: "Grande", stock: 7 },
@@ -207,7 +207,7 @@ async function main() {
       imageUrl: "/api/uploads/products/00da9961-e129-4f0b-aff1-8fa06c13f981.jpg",
       images: ["/api/uploads/products/00da9961-e129-4f0b-aff1-8fa06c13f981.jpg"],
       featured: true,
-      categoryId: cuadros.id,
+      categoryIds: [cuadros.id],
       variants: [
         { name: "Color", value: "Rosa", stock: 5 },
         { name: "Color", value: "Lavanda", stock: 4 },
@@ -223,7 +223,7 @@ async function main() {
       imageUrl: "/api/uploads/products/00e77027-7c91-4d7b-b5f8-f3c1e5fcc34a.jpg",
       images: ["/api/uploads/products/00e77027-7c91-4d7b-b5f8-f3c1e5fcc34a.jpg"],
       featured: true,
-      categoryId: decoracion.id,
+      categoryIds: [decoracion.id],
       variants: [
         { name: "Forma", value: "Redonda", stock: 8 },
         { name: "Forma", value: "Estrella", stock: 6 },
@@ -239,7 +239,7 @@ async function main() {
       imageUrl: "/api/uploads/products/01be6a2f-9fa6-4f0e-8ad9-2757f4d3283b.jpg",
       images: ["/api/uploads/products/01be6a2f-9fa6-4f0e-8ad9-2757f4d3283b.jpg"],
       featured: true,
-      categoryId: mdf.id,
+      categoryIds: [mdf.id],
       variants: [
         { name: "Tama\u00f1o", value: "8cm", stock: 20 },
         { name: "Tama\u00f1o", value: "10cm", stock: 15 },
@@ -256,7 +256,7 @@ async function main() {
       imageUrl: "/api/uploads/products/02213fd8-1356-4101-ae31-2e8b7f9878c5.png",
       images: ["/api/uploads/products/02213fd8-1356-4101-ae31-2e8b7f9878c5.png"],
       featured: true,
-      categoryId: impresion3d.id,
+      categoryIds: [impresion3d.id],
       variants: [
         { name: "Color", value: "Rosa", stock: 10 },
         { name: "Color", value: "Blanco", stock: 8 },
@@ -273,7 +273,7 @@ async function main() {
       imageUrl: "/api/uploads/products/033721a6-58b9-4ce7-b4fe-f1751afb9e96.jpg",
       images: ["/api/uploads/products/033721a6-58b9-4ce7-b4fe-f1751afb9e96.jpg"],
       featured: true,
-      categoryId: regalos.id,
+      categoryIds: [regalos.id],
       variants: [
         { name: "Variante", value: "Rosas", stock: 5 },
         { name: "Variante", value: "Lavanda", stock: 4 },
@@ -288,7 +288,7 @@ async function main() {
       imageUrl: "/api/uploads/products/03a2aa0d-b916-4956-9b1e-d72a7877a622.jpg",
       images: ["/api/uploads/products/03a2aa0d-b916-4956-9b1e-d72a7877a622.jpg"],
       featured: true,
-      categoryId: decoracion.id,
+      categoryIds: [decoracion.id],
       variants: [
         { name: "Aroma", value: "Vainilla", stock: 10 },
         { name: "Aroma", value: "Jazm\u00edn", stock: 8 },
@@ -298,15 +298,21 @@ async function main() {
   ];
 
   for (const p of products) {
-    const { variants, ...productData } = p;
+    const { variants, categoryIds, ...productBase } = p;
     await prisma.product.upsert({
       where: { slug: p.slug },
       update: {
-        imageUrl: productData.imageUrl ?? null,
-        images: productData.images,
+        imageUrl: productBase.imageUrl ?? null,
+        images: productBase.images,
+        categories: {
+          set: categoryIds.map((id) => ({ id })),
+        },
       },
       create: {
-        ...productData,
+        ...productBase,
+        categories: {
+          connect: categoryIds.map((id) => ({ id })),
+        },
         variants: { create: variants },
       },
     });
@@ -363,6 +369,23 @@ async function main() {
     }
   }
   console.log("Payment accounts ensured");
+
+  const mvdZone = await prisma.shippingZone.findFirst({
+    where: { name: "Montevideo (cadetería)" },
+  });
+  if (!mvdZone) {
+    await prisma.shippingZone.create({
+      data: {
+        name: "Montevideo (cadetería)",
+        price: 250,
+        departmentNames: ["Montevideo"],
+        cityNames: [],
+        active: true,
+        sortOrder: 0,
+      },
+    });
+    console.log("Default shipping zone Montevideo created");
+  }
 
   // Site settings
   await prisma.siteSettings.upsert({

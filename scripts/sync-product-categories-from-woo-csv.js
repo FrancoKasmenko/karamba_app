@@ -134,7 +134,12 @@ async function findExistingProduct(nombre, wooId) {
 
   const byName = await prisma.product.findFirst({
     where: { name },
-    select: { id: true, name: true, slug: true, categoryId: true },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      categories: { select: { id: true } },
+    },
   });
   if (byName) return { product: byName, how: "name" };
 
@@ -142,7 +147,12 @@ async function findExistingProduct(nombre, wooId) {
   if (base) {
     const bySlug = await prisma.product.findFirst({
       where: { slug: base },
-      select: { id: true, name: true, slug: true, categoryId: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        categories: { select: { id: true } },
+      },
     });
     if (bySlug) return { product: bySlug, how: "slug" };
 
@@ -150,14 +160,24 @@ async function findExistingProduct(nombre, wooId) {
     if (wid) {
       const byWooSlug = await prisma.product.findFirst({
         where: { slug: `${base}-${wid}` },
-        select: { id: true, name: true, slug: true, categoryId: true },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          categories: { select: { id: true } },
+        },
       });
       if (byWooSlug) return { product: byWooSlug, how: "slug+wooId" };
     }
 
     const bySlugSuffix = await prisma.product.findFirst({
       where: { slug: { startsWith: `${base}-` } },
-      select: { id: true, name: true, slug: true, categoryId: true },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        categories: { select: { id: true } },
+      },
     });
     if (bySlugSuffix) return { product: bySlugSuffix, how: "slug-suffix" };
   }
@@ -260,22 +280,23 @@ async function main() {
       continue;
     }
 
-    if (found.product.categoryId === leaf.id) {
+    const hasLeaf = found.product.categories.some((c) => c.id === leaf.id);
+    if (hasLeaf) {
       stats.unchanged++;
       console.log(
-        `[${i + 1}/${rows.length}] ✓ "${nombre}" ya en "${leaf.name}" (${leaf.id})`
+        `[${i + 1}/${rows.length}] ✓ "${nombre}" ya incluye "${leaf.name}" (${leaf.id})`
       );
       continue;
     }
 
     await prisma.product.update({
       where: { id: found.product.id },
-      data: { categoryId: leaf.id },
+      data: { categories: { connect: { id: leaf.id } } },
     });
 
     stats.updated++;
     console.log(
-      `[${i + 1}/${rows.length}] ✅ "${nombre}" [${found.how}] → categoryId ${leaf.id} (${leaf.name})`
+      `[${i + 1}/${rows.length}] ✅ "${nombre}" [${found.how}] → conectada categoría ${leaf.id} (${leaf.name})`
     );
   }
 

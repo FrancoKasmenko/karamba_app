@@ -20,6 +20,7 @@ import {
 } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 import { formatPrice } from "@/lib/utils";
+import { DescriptionText } from "@/components/ui/description-text";
 
 interface CourseSession {
   id: string;
@@ -175,15 +176,12 @@ export default function CourseDetail() {
                   </span>
                 </div>
 
-                {course.description && (
-                  <div className="prose prose-gray max-w-none">
-                    {course.description.split("\n").map((p, i) => (
-                      <p key={i} className="text-gray-600 leading-relaxed mb-3">
-                        {p}
-                      </p>
-                    ))}
-                  </div>
-                )}
+                <DescriptionText
+                  className="text-gray-600 leading-relaxed max-w-none"
+                  as="div"
+                >
+                  {course.description}
+                </DescriptionText>
 
                 <div className="mt-8 p-5 bg-mint/10 rounded-2xl border border-mint/30">
                   <div className="flex items-start gap-3">

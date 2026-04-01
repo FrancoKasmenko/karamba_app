@@ -80,13 +80,13 @@ export default function AdminProductosPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="font-display text-2xl font-bold text-gray-800">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h1 className="font-display text-xl sm:text-2xl font-bold text-gray-800">
           Productos
         </h1>
-        <Link href="/admin/productos/nuevo">
-          <Button>
-            <FiPlus className="mr-2" /> Nuevo Producto
+        <Link href="/admin/productos/nuevo" className="shrink-0 w-full sm:w-auto">
+          <Button className="w-full sm:w-auto justify-center touch-manipulation">
+            <FiPlus className="mr-2 shrink-0" /> Nuevo producto
           </Button>
         </Link>
       </div>
@@ -95,7 +95,7 @@ export default function AdminProductosPage() {
         <label className="sr-only" htmlFor="admin-product-search">
           Buscar productos
         </label>
-        <div className="relative max-w-md">
+        <div className="relative w-full max-w-md">
           <FiSearch
             className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
             size={18}
@@ -128,23 +128,24 @@ export default function AdminProductosPage() {
           : "No hay productos aún. ¡Creá el primero!"}
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-primary-light/30 overflow-hidden">
-          <table className="w-full">
+        <div className="bg-white rounded-2xl border border-primary-light/30 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto -mx-px">
+            <table className="w-full min-w-[520px] text-sm">
             <thead>
               <tr className="bg-beige text-left">
-                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 sm:px-5 py-3 text-xs font-medium text-gray-500 uppercase">
                   Producto
                 </th>
-                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 sm:px-5 py-3 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
                   Precio
                 </th>
-                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 sm:px-5 py-3 text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">
                   Variantes
                 </th>
-                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 sm:px-5 py-3 text-xs font-medium text-gray-500 uppercase">
                   Estado
                 </th>
-                <th className="px-5 py-3 text-xs font-medium text-gray-500 uppercase">
+                <th className="px-3 sm:px-5 py-3 text-xs font-medium text-gray-500 uppercase whitespace-nowrap">
                   Acciones
                 </th>
               </tr>
@@ -152,18 +153,21 @@ export default function AdminProductosPage() {
             <tbody className="divide-y divide-primary-light/20">
               {products.map((product) => (
                 <tr key={product.id} className="hover:bg-cream/50">
-                  <td className="px-5 py-4">
+                  <td className="px-3 sm:px-5 py-4">
                     <span className="font-medium text-gray-800">
                       {product.name}
                     </span>
+                    <p className="sm:hidden text-[11px] text-gray-400 mt-0.5">
+                      {product.variants.length} variantes
+                    </p>
                   </td>
-                  <td className="px-5 py-4 text-sm text-gray-600">
+                  <td className="px-3 sm:px-5 py-4 text-gray-600 whitespace-nowrap">
                     {formatPrice(product.price)}
                   </td>
-                  <td className="px-5 py-4 text-sm text-gray-500">
+                  <td className="px-3 sm:px-5 py-4 text-gray-500 hidden sm:table-cell">
                     {product.variants.length} variantes
                   </td>
-                  <td className="px-5 py-4">
+                  <td className="px-3 sm:px-5 py-4">
                     <span
                       className={`text-xs font-medium px-2 py-1 rounded-full ${
                         product.active
@@ -174,17 +178,20 @@ export default function AdminProductosPage() {
                       {product.active ? "Activo" : "Inactivo"}
                     </span>
                   </td>
-                  <td className="px-5 py-4">
-                    <div className="flex gap-2">
+                  <td className="px-3 sm:px-5 py-4">
+                    <div className="flex gap-1 sm:gap-2">
                       <Link
                         href={`/admin/productos/${product.id}`}
-                        className="p-2 text-gray-400 hover:text-primary-dark transition-colors"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 hover:text-primary-dark hover:bg-primary-light/15 transition-colors touch-manipulation"
+                        aria-label="Editar producto"
                       >
                         <FiEdit size={16} />
                       </Link>
                       <button
+                        type="button"
                         onClick={() => handleDelete(product.id)}
-                        className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors touch-manipulation"
+                        aria-label="Eliminar producto"
                       >
                         <FiTrash2 size={16} />
                       </button>
@@ -194,6 +201,7 @@ export default function AdminProductosPage() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

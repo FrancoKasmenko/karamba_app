@@ -1,7 +1,7 @@
 "use client";
 import { api } from "@/lib/public-api";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -26,6 +26,9 @@ import {
 } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 import BankLogo from "@/components/ui/bank-logo";
+import { trackAnalytics } from "@/lib/analytics-client";
+import { getAnalyticsSessionId } from "@/lib/analytics-session-client";
+import { CheckoutPayPalButtons } from "@/components/checkout/checkout-paypal-buttons";
 
 const DEPARTAMENTOS = [
   "Montevideo",
@@ -80,9 +83,13 @@ interface PayAccount {
   bankKey: string;
 }
 
-type PayMethod = "mercadopago" | "transfer";
+type PayMethod = "mercadopago" | "transfer" | "paypal";
 
-const SHIPPING_COST_MVD = 250;
+type ShippingQuoteState = {
+  cost: number;
+  zoneName: string | null;
+  pendingManualQuote: boolean;
+};
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -123,6 +130,18 @@ export default function CheckoutPage() {
     discount: number;
   } | null>(null);
   const [couponBusy, setCouponBusy] = useState(false);
+  const beginCheckoutSent = useRef(false);
+  const [shippingQuote, setShippingQuote] = useState<ShippingQuoteState>({
+    cost: 0,
+    zoneName: null,
+    pendingManualQuote: false,
+  });
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [paypalPublic, setPaypalPublic] = useState<{
+    enabled: boolean;
+    clientId: string | null;
+    currency: string;
+  } | null>(null);
 
   const cartProductIdsKey = [...new Set(items.map((i) => i.productId))]
     .sort()
@@ -191,18 +210,147 @@ export default function CheckoutPage() {
     }
   }, [session]);
 
-  const isMontevideo = form.departamento === "Montevideo";
+  useEffect(() => {
+    if (!session?.user) return;
+    fetch(api("/api/profile"))
+      .then((r) => r.json())
+      .then(
+        (u: {
+          error?: string;
+          phone?: string | null;
+          address?: string | null;
+          city?: string | null;
+          departamento?: string | null;
+          postalCode?: string | null;
+        }) => {
+          if (!u || u.error) return;
+          setForm((prev) => ({
+            ...prev,
+            phone: prev.phone || u.phone || "",
+            address: u.address || prev.address,
+            city: u.city || prev.city,
+            departamento: u.departamento || prev.departamento,
+            postalCode: u.postalCode || prev.postalCode,
+          }));
+        }
+      )
+      .catch(() => {});
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    fetch(api("/api/site/paypal-public"))
+      .then((r) => r.json())
+      .then(
+        (d: {
+          enabled?: boolean;
+          clientId?: string | null;
+          currency?: string;
+        }) => {
+          setPaypalPublic({
+            enabled: Boolean(d.enabled && d.clientId),
+            clientId: d.clientId ?? null,
+            currency: d.currency || "USD",
+          });
+        }
+      )
+      .catch(() =>
+        setPaypalPublic({
+          enabled: false,
+          clientId: null,
+          currency: "USD",
+        })
+      );
+  }, []);
+
+  useEffect(() => {
+    if (items.length === 0 || skipPhysicalDelivery) {
+      setShippingQuote({
+        cost: 0,
+        zoneName: null,
+        pendingManualQuote: false,
+      });
+      setQuoteLoading(false);
+      return;
+    }
+    if (delivery === "pickup") {
+      setShippingQuote({
+        cost: 0,
+        zoneName: null,
+        pendingManualQuote: false,
+      });
+      setQuoteLoading(false);
+      return;
+    }
+
+    const productIds = [...new Set(items.map((i) => i.productId))];
+    let cancelled = false;
+    setQuoteLoading(true);
+    const t = setTimeout(() => {
+      fetch(api("/api/shipping/quote"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productIds,
+          delivery: "shipping",
+          departamento: form.departamento,
+          city: form.city,
+        }),
+      })
+        .then((r) => r.json())
+        .then(
+          (d: {
+            error?: string;
+            cost?: number;
+            zoneName?: string | null;
+            pendingManualQuote?: boolean;
+          }) => {
+            if (cancelled) return;
+            if (d.error) {
+              setShippingQuote({
+                cost: 0,
+                zoneName: null,
+                pendingManualQuote: true,
+              });
+              return;
+            }
+            setShippingQuote({
+              cost: Math.max(0, Number(d.cost) || 0),
+              zoneName: d.zoneName ?? null,
+              pendingManualQuote: Boolean(d.pendingManualQuote),
+            });
+          }
+        )
+        .catch(() => {
+          if (!cancelled) {
+            setShippingQuote({
+              cost: 0,
+              zoneName: null,
+              pendingManualQuote: true,
+            });
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setQuoteLoading(false);
+        });
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [cartProductIdsKey, skipPhysicalDelivery, delivery, form.departamento, form.city]);
+
   const shippingCost = skipPhysicalDelivery
     ? 0
     : delivery === "pickup"
       ? 0
-      : isMontevideo
-        ? SHIPPING_COST_MVD
-        : 0;
+      : shippingQuote.cost;
   const showShippingTBD =
-    !skipPhysicalDelivery && delivery === "shipping" && !isMontevideo;
+    !skipPhysicalDelivery &&
+    delivery === "shipping" &&
+    shippingQuote.pendingManualQuote;
   const unitForMethod = (base: number) =>
-    payMethod === "mercadopago" ? priceWithCardFee(base) : base;
+    payMethod === "transfer" ? base : priceWithCardFee(base);
   const subtotal = mounted
     ? items.reduce(
         (s, i) => s + unitForMethod(i.price) * i.quantity,
@@ -214,6 +362,112 @@ export default function CheckoutPage() {
     : 0;
   const payableSubtotal = Math.max(0, subtotal - discountCapped);
   const finalTotal = payableSubtotal + shippingCost;
+
+  useEffect(() => {
+    if (
+      !mounted ||
+      !session?.user ||
+      items.length === 0 ||
+      cartMetaLoading ||
+      beginCheckoutSent.current
+    ) {
+      return;
+    }
+    beginCheckoutSent.current = true;
+    trackAnalytics({
+      type: "begin_checkout",
+      metadata: {
+        cartTotal: finalTotal,
+        currency: "UYU",
+        lineCount: items.length,
+      },
+    });
+  }, [mounted, session?.user, items.length, cartMetaLoading, finalTotal]);
+
+  const persistShippingProfile = useCallback(() => {
+    const payload: Record<string, string | undefined> = {
+      name: form.name.trim(),
+      phone: form.phone.trim(),
+    };
+    if (!skipPhysicalDelivery && delivery === "shipping") {
+      payload.address = form.address.trim();
+      payload.city = form.city.trim();
+      payload.departamento = form.departamento;
+      if (form.postalCode.trim()) payload.postalCode = form.postalCode.trim();
+    }
+    void fetch(api("/api/profile"), {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  }, [
+    form.name,
+    form.phone,
+    form.address,
+    form.city,
+    form.departamento,
+    form.postalCode,
+    skipPhysicalDelivery,
+    delivery,
+  ]);
+
+  const getPaypalPayload = useCallback(() => {
+    return {
+      items: items.map((i) => ({
+        productId: i.productId,
+        name: i.name,
+        quantity: i.quantity,
+        variant: i.variant,
+      })),
+      shipping: skipPhysicalDelivery
+        ? {
+            name: form.name,
+            email: form.email,
+            phone: form.phone,
+            address: onlineCourseOnly
+              ? "Curso online — acceso en Mi aprendizaje (sin envío físico)"
+              : "Producto(s) digital(es) — sin envío ni retiro",
+            city: "Digital",
+            notes: form.notes,
+            delivery: "digital",
+            departamento: "—",
+            shippingCost: 0,
+          }
+        : {
+            name: form.name,
+            email: form.email,
+            phone: form.phone,
+            address:
+              delivery === "pickup"
+                ? "Retiro en local - Solferino 4041, Buceo"
+                : `${form.address}, ${form.city}, ${form.departamento}${form.postalCode ? ` (CP: ${form.postalCode})` : ""}`,
+            city: delivery === "pickup" ? "Montevideo (Retiro)" : form.city,
+            notes: form.notes,
+            delivery,
+            departamento: form.departamento,
+            shippingCost,
+          },
+      couponCode: appliedCoupon?.code ?? "",
+      analyticsSessionId: getAnalyticsSessionId(),
+    };
+  }, [
+    items,
+    form,
+    skipPhysicalDelivery,
+    onlineCourseOnly,
+    delivery,
+    shippingCost,
+    appliedCoupon,
+  ]);
+
+  const onPayPalSuccess = useCallback(
+    (orderId: string) => {
+      persistShippingProfile();
+      clearCart();
+      router.push(`/checkout/success?orderId=${encodeURIComponent(orderId)}`);
+    },
+    [persistShippingProfile, clearCart, router]
+  );
 
   const applyCoupon = async () => {
     const code = couponInput.trim();
@@ -229,7 +483,11 @@ export default function CheckoutPage() {
         body: JSON.stringify({
           couponCode: code,
           paymentMethod:
-            payMethod === "transfer" ? "BANK_TRANSFER" : "MERCADOPAGO",
+            payMethod === "transfer"
+              ? "BANK_TRANSFER"
+              : payMethod === "paypal"
+                ? "PAYPAL"
+                : "MERCADOPAGO",
           items: items.map((i) => ({
             productId: i.productId,
             quantity: i.quantity,
@@ -355,6 +613,13 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (payMethod === "paypal") {
+      toast.error(
+        "El pago con PayPal se hace con los botones del resumen (PayPal o tarjeta), no con «Confirmar»."
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -399,10 +664,13 @@ export default function CheckoutPage() {
                 shippingCost,
               },
           paymentMethod:
-            payMethod === "transfer" ? "BANK_TRANSFER" : "MERCADOPAGO",
+            payMethod === "transfer"
+              ? "BANK_TRANSFER"
+              : "MERCADOPAGO",
           paymentAccountId:
             payMethod === "transfer" ? selectedAccountId : undefined,
           couponCode: appliedCoupon?.code ?? "",
+          analyticsSessionId: getAnalyticsSessionId(),
         }),
       });
 
@@ -415,6 +683,7 @@ export default function CheckoutPage() {
       }
 
       if (data.flow === "transfer") {
+        persistShippingProfile();
         clearCart();
         router.push(`/checkout/transferencia?orderId=${data.orderId}`);
         setLoading(false);
@@ -422,9 +691,11 @@ export default function CheckoutPage() {
       }
 
       if (data.initPoint) {
+        persistShippingProfile();
         clearCart();
         window.location.href = data.initPoint;
       } else {
+        persistShippingProfile();
         clearCart();
         toast.success("¡Pedido creado exitosamente!");
         router.push(`/checkout/success?orderId=${data.orderId}`);
@@ -774,21 +1045,30 @@ export default function CheckoutPage() {
                     </div>
 
                     {!skipPhysicalDelivery && delivery === "shipping" && (
-                      <div className="sm:col-span-2 p-3 rounded-xl bg-accent-light/30 text-sm">
-                        {isMontevideo ? (
-                          <p className="text-accent-dark font-medium">
-                            Envío por cadetería privada:{" "}
-                            <span className="font-bold">
-                              {formatPrice(SHIPPING_COST_MVD)}
-                            </span>
+                      <div className="sm:col-span-2 p-3 rounded-xl bg-accent-light/30 text-sm space-y-1">
+                        {quoteLoading ? (
+                          <p className="text-gray-600">Calculando envío…</p>
+                        ) : shippingQuote.pendingManualQuote ? (
+                          <p className="text-accent-dark">
+                            <span className="font-medium">
+                              No tenemos tarifa automática para esta ubicación.
+                            </span>{" "}
+                            Podés pagar con transferencia o Mercado Pago; te
+                            contactamos por WhatsApp para el envío. PayPal solo
+                            está disponible cuando hay precio de envío definido.
                           </p>
                         ) : (
-                          <p className="text-accent-dark">
-                            Envío por DAC al interior.{" "}
-                            <span className="font-medium">
-                              El costo se calcula según destino y se confirma por
-                              WhatsApp.
+                          <p className="text-accent-dark font-medium">
+                            Envío estándar:{" "}
+                            <span className="font-bold">
+                              {formatPrice(shippingQuote.cost)}
                             </span>
+                            {shippingQuote.zoneName && (
+                              <span className="font-normal text-gray-600">
+                                {" "}
+                                ({shippingQuote.zoneName})
+                              </span>
+                            )}
                           </p>
                         )}
                       </div>
@@ -839,7 +1119,7 @@ export default function CheckoutPage() {
                 <h2 className="font-bold text-warm-gray">Método de pago</h2>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
                 <button
                   type="button"
                   onClick={() => {
@@ -871,6 +1151,56 @@ export default function CheckoutPage() {
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     Redes de cobranza o cuenta bancaria
+                  </p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!paypalPublic?.enabled) return;
+                    if (
+                      !skipPhysicalDelivery &&
+                      delivery === "shipping" &&
+                      (quoteLoading ||
+                        shippingQuote.pendingManualQuote)
+                    ) {
+                      toast.error(
+                        "PayPal requiere un monto de envío definido. Elegí otra forma de pago o contactanos."
+                      );
+                      return;
+                    }
+                    setPayMethod("paypal");
+                    setErrors((prev) => ({ ...prev, paymentAccount: undefined }));
+                  }}
+                  disabled={
+                    !paypalPublic?.enabled ||
+                    (!skipPhysicalDelivery &&
+                      delivery === "shipping" &&
+                      (quoteLoading || shippingQuote.pendingManualQuote))
+                  }
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${
+                    payMethod === "paypal"
+                      ? "border-indigo-500 bg-indigo-50/80"
+                      : "border-gray-100 hover:border-gray-200"
+                  } ${
+                    !paypalPublic?.enabled ||
+                    (!skipPhysicalDelivery &&
+                      delivery === "shipping" &&
+                      (quoteLoading || shippingQuote.pendingManualQuote))
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
+                >
+                  <p className="text-sm font-bold text-warm-gray">
+                    Pagar con PayPal
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {!paypalPublic?.enabled
+                      ? "No activado en la tienda"
+                      : !skipPhysicalDelivery &&
+                          delivery === "shipping" &&
+                          (quoteLoading || shippingQuote.pendingManualQuote)
+                        ? "Ubicación sin tarifa automática"
+                        : "Cuenta PayPal o tarjeta"}
                   </p>
                 </button>
               </div>
@@ -930,6 +1260,7 @@ export default function CheckoutPage() {
                   )}
                 </div>
               )}
+
             </motion.div>
 
             {/* WhatsApp info */}
@@ -1036,15 +1367,15 @@ export default function CheckoutPage() {
                     {formatPrice(subtotal)}
                   </span>
                 </div>
-                {payMethod === "mercadopago" ? (
-                  <p className="text-[11px] text-gray-500 -mt-1">
-                    Podés <strong className="text-emerald-800">ahorrar un 12%</strong>{" "}
-                    eligiendo transferencia bancaria.
-                  </p>
-                ) : (
+                {payMethod === "transfer" ? (
                   <p className="text-[11px] text-emerald-800/90 -mt-1">
                     <strong>12% de descuento</strong> aplicado por pago con
                     transferencia.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-gray-500 -mt-1">
+                    Podés <strong className="text-emerald-800">ahorrar un 12%</strong>{" "}
+                    eligiendo transferencia bancaria.
                   </p>
                 )}
 
@@ -1090,27 +1421,50 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              <Button
-                type="submit"
-                disabled={
-                  loading ||
-                  !isFormValid() ||
-                  (payMethod === "transfer" && accounts.length === 0)
-                }
-                size="lg"
-                className="w-full mt-6"
-              >
-                {loading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Procesando…
-                  </span>
-                ) : payMethod === "transfer" ? (
-                  "Confirmar pedido por transferencia"
+              {payMethod === "paypal" ? (
+                paypalPublic?.enabled && paypalPublic.clientId ? (
+                  <div className="mt-6 w-full">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                      Pagar ahora
+                    </p>
+                    <CheckoutPayPalButtons
+                      summary
+                      clientId={paypalPublic.clientId}
+                      currency={paypalPublic.currency}
+                      disabled={!isFormValid()}
+                      getPayload={getPaypalPayload}
+                      onSuccess={onPayPalSuccess}
+                    />
+                  </div>
                 ) : (
-                  "Pagar con Mercado Pago"
-                )}
-              </Button>
+                  <p className="mt-6 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                    PayPal no está disponible (falta activarlo o el Client ID en
+                    Admin → Pagos).
+                  </p>
+                )
+              ) : (
+                <Button
+                  type="submit"
+                  disabled={
+                    loading ||
+                    !isFormValid() ||
+                    (payMethod === "transfer" && accounts.length === 0)
+                  }
+                  size="lg"
+                  className="w-full mt-6"
+                >
+                  {loading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Procesando…
+                    </span>
+                  ) : payMethod === "transfer" ? (
+                    "Confirmar pedido por transferencia"
+                  ) : (
+                    "Pagar con Mercado Pago"
+                  )}
+                </Button>
+              )}
 
               {!isFormValid() && Object.keys(touched).length > 0 && (
                 <p className="text-xs text-center text-gray-400 mt-3">

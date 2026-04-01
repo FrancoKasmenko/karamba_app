@@ -1,6 +1,16 @@
+import {
+  DEFAULT_PUBLIC_SITE_ORIGIN,
+  getSiteOrigin,
+} from "@/lib/site-url";
+
+function isIPv4Host(host: string): boolean {
+  return /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(host);
+}
+
 /**
  * Origen del sitio (protocolo + host, sin path) para armar enlaces en correos y MP.
- * Si NEXTAUTH_URL incluye path (ej. `…/_k/auth`), se ignora el path.
+ * Si NEXTAUTH_URL incluye path (ej. `…/_k/auth`), se usa solo el origin.
+ * Si la variable activa es una IPv4 (típico VPS sin dominio en .env), se usa el dominio público.
  */
 export function getBaseUrl(): string {
   const raw = (
@@ -13,6 +23,15 @@ export function getBaseUrl(): string {
   const withScheme = raw.includes("://") ? raw : `https://${raw}`;
   try {
     const u = new URL(withScheme);
+    if (isIPv4Host(u.hostname)) {
+      const pub = getSiteOrigin();
+      try {
+        if (!isIPv4Host(new URL(pub).hostname)) return pub;
+      } catch {
+        /* seguir */
+      }
+      return DEFAULT_PUBLIC_SITE_ORIGIN;
+    }
     return u.origin;
   } catch {
     return raw.replace(/\/$/, "");

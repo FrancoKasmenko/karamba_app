@@ -57,15 +57,17 @@ export default function AdminOrdenesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-extrabold text-warm-gray">Órdenes</h1>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h1 className="text-xl sm:text-2xl font-extrabold text-warm-gray">
+          Órdenes
+        </h1>
         <span className="text-sm text-gray-400">
           {orders.length} pedido{orders.length !== 1 && "s"}
         </span>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6 max-sm:gap-1.5">
         <button
           onClick={() => setFilter("ALL")}
           className={`px-3 py-1.5 text-xs font-medium rounded-full transition-colors ${filter === "ALL" ? "bg-warm-gray text-white" : "bg-soft-gray text-gray-600 hover:bg-gray-200"}`}
@@ -90,25 +92,26 @@ export default function AdminOrdenesPage() {
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[340px] text-sm">
             <thead>
               <tr className="bg-soft-gray text-left">
-                <th className="px-5 py-3 text-xs font-semibold text-warm-gray uppercase">
+                <th className="px-3 sm:px-5 py-3 text-xs font-semibold text-warm-gray uppercase">
                   Orden
                 </th>
-                <th className="px-5 py-3 text-xs font-semibold text-warm-gray uppercase hidden sm:table-cell">
+                <th className="px-3 sm:px-5 py-3 text-xs font-semibold text-warm-gray uppercase hidden sm:table-cell">
                   Cliente
                 </th>
-                <th className="px-5 py-3 text-xs font-semibold text-warm-gray uppercase hidden md:table-cell">
+                <th className="px-3 sm:px-5 py-3 text-xs font-semibold text-warm-gray uppercase hidden md:table-cell">
                   Ítems
                 </th>
-                <th className="px-5 py-3 text-xs font-semibold text-warm-gray uppercase">
+                <th className="px-3 sm:px-5 py-3 text-xs font-semibold text-warm-gray uppercase whitespace-nowrap">
                   Total
                 </th>
-                <th className="px-5 py-3 text-xs font-semibold text-warm-gray uppercase">
+                <th className="px-3 sm:px-5 py-3 text-xs font-semibold text-warm-gray uppercase">
                   Estado
                 </th>
-                <th className="px-5 py-3 text-xs font-semibold text-warm-gray uppercase w-16" />
+                <th className="px-3 sm:px-5 py-3 text-xs font-semibold text-warm-gray uppercase w-14 sm:w-16" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -122,7 +125,7 @@ export default function AdminOrdenesPage() {
                     key={order.id}
                     className="hover:bg-cream/40 transition-colors"
                   >
-                    <td className="px-5 py-4">
+                    <td className="px-3 sm:px-5 py-4">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <p className="text-sm font-mono font-semibold text-warm-gray">
                           #{order.id.slice(-8).toUpperCase()}
@@ -142,8 +145,11 @@ export default function AdminOrdenesPage() {
                           minute: "2-digit",
                         })}
                       </p>
+                      <p className="sm:hidden text-[11px] text-gray-500 mt-1 truncate max-w-[12rem]">
+                        {order.shippingName || order.user.name || order.user.email}
+                      </p>
                     </td>
-                    <td className="px-5 py-4 hidden sm:table-cell">
+                    <td className="px-3 sm:px-5 py-4 hidden sm:table-cell">
                       <p className="text-sm font-medium text-gray-800">
                         {order.shippingName || order.user.name || "—"}
                       </p>
@@ -151,31 +157,32 @@ export default function AdminOrdenesPage() {
                         {order.user.email}
                       </p>
                     </td>
-                    <td className="px-5 py-4 hidden md:table-cell">
+                    <td className="px-3 sm:px-5 py-4 hidden md:table-cell">
                       <p className="text-xs text-gray-500 line-clamp-2 max-w-[200px]">
                         {order.items
                           .map((i) => `${i.productName} ×${i.quantity}`)
                           .join(", ")}
                       </p>
                     </td>
-                    <td className="px-5 py-4">
-                      <span className="text-sm font-bold text-warm-gray">
+                    <td className="px-3 sm:px-5 py-4">
+                      <span className="text-sm font-bold text-warm-gray whitespace-nowrap">
                         {formatPrice(order.total)}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-3 sm:px-5 py-4">
                       <span
                         className={`inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full ${st.color}`}
                       >
                         {st.label}
                       </span>
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-3 sm:px-5 py-4">
                       <Link
                         href={`/admin/ordenes/${order.id}`}
-                        className="p-2 rounded-lg text-gray-400 hover:text-primary hover:bg-primary-light/20 transition-colors inline-flex"
+                        className="flex h-10 w-10 items-center justify-center rounded-lg text-gray-400 hover:text-primary hover:bg-primary-light/20 transition-colors touch-manipulation"
+                        aria-label="Ver orden"
                       >
-                        <FiEye size={16} />
+                        <FiEye size={18} />
                       </Link>
                     </td>
                   </tr>
@@ -183,6 +190,7 @@ export default function AdminOrdenesPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

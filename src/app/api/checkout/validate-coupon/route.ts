@@ -7,8 +7,12 @@ import {
   validateCouponForCart,
   type CartLineInput,
 } from "@/lib/coupon-checkout";
+import { parseBodyPaymentMethod } from "@/lib/checkout-payment-method";
 
-type ProductWithVariants = Product & { variants: Variant[] };
+type ProductWithVariants = Product & {
+  variants: Variant[];
+  categories: { id: string }[];
+};
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
@@ -31,8 +35,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Carrito vacío" }, { status: 400 });
   }
 
-  const method =
-    paymentMethod === "BANK_TRANSFER" ? "BANK_TRANSFER" : "MERCADOPAGO";
+  const method = parseBodyPaymentMethod(paymentMethod);
+  if (!method) {
+    return NextResponse.json(
+      { error: "Método de pago no válido" },
+      { status: 400 }
+    );
+  }
 
   const lineProductIds = [
     ...new Set(
@@ -44,7 +53,10 @@ export async function POST(req: Request) {
 
   const dbProducts = await prisma.product.findMany({
     where: { id: { in: lineProductIds } },
-    include: { variants: true },
+    include: {
+      variants: true,
+      categories: { select: { id: true } },
+    },
   });
 
   if (dbProducts.length !== lineProductIds.length) {

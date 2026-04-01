@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { FiShoppingBag, FiMinus, FiPlus } from "react-icons/fi";
@@ -14,7 +14,11 @@ import {
 } from "@/lib/image-url";
 import Button from "@/components/ui/button";
 import PurchaseInfo from "@/components/product/purchase-info";
+import { DescriptionText } from "@/components/ui/description-text";
+import Link from "next/link";
+import { ProductShippingEstimate } from "@/components/product/product-shipping-estimate";
 import toast from "react-hot-toast";
+import { trackAnalytics } from "@/lib/analytics-client";
 
 interface Variant {
   id: string;
@@ -34,8 +38,9 @@ interface Product {
   images: string[];
   imageUrl: string | null;
   variants: Variant[];
-  category: { name: string; slug: string } | null;
+  categories: { name: string; slug: string }[];
   isDigital: boolean;
+  isOnlineCourse?: boolean;
   fileName: string | null;
   minPurchaseQuantity?: number;
 }
@@ -46,6 +51,14 @@ export default function ProductDetail({ product }: { product: Product }) {
   const [selectedVariant, setSelectedVariant] = useState<Variant | null>(null);
   const [quantity, setQuantity] = useState(minQty);
   const addItem = useCartStore((s) => s.addItem);
+
+  useEffect(() => {
+    trackAnalytics({
+      type: "view_item",
+      productId: product.id,
+      metadata: { slug: product.slug, name: product.name },
+    });
+  }, [product.id, product.slug, product.name]);
 
   const currentPrice = selectedVariant?.price ?? product.price;
   const images = resolveProductImagesGallery({
@@ -92,6 +105,18 @@ export default function ProductDetail({ product }: { product: Product }) {
       );
       return;
     }
+    const cartTotal = useCartStore.getState().total();
+    trackAnalytics({
+      type: "add_to_cart",
+      productId: product.id,
+      metadata: {
+        slug: product.slug,
+        quantity,
+        variant: selectedVariant?.value,
+        cartTotal,
+        currency: "UYU",
+      },
+    });
     toast.success("Agregado al carrito");
   };
 
@@ -154,10 +179,18 @@ export default function ProductDetail({ product }: { product: Product }) {
 
         {/* Info */}
         <div className="flex flex-col">
-          {product.category && (
-            <span className="text-sm text-primary font-semibold mb-2 uppercase tracking-wider">
-              {product.category.name}
-            </span>
+          {product.categories.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {product.categories.map((c) => (
+                <Link
+                  key={c.slug}
+                  href={`/productos?categoria=${encodeURIComponent(c.slug)}`}
+                  className="text-sm text-primary font-semibold uppercase tracking-wider hover:underline"
+                >
+                  {c.name}
+                </Link>
+              ))}
+            </div>
           )}
           <h1 className="text-3xl sm:text-4xl font-extrabold text-warm-gray leading-tight">
             {product.name}
@@ -172,11 +205,18 @@ export default function ProductDetail({ product }: { product: Product }) {
 
           <MercadoPagoInstallments baseTransferPrice={currentPrice} />
 
-          {product.description && (
-            <p className="mt-6 text-gray-600 leading-relaxed">
-              {product.description}
-            </p>
-          )}
+          <ProductShippingEstimate
+            productId={product.id}
+            isDigital={product.isDigital}
+            isOnlineCourse={Boolean(product.isOnlineCourse)}
+          />
+
+          <DescriptionText
+            className="mt-6 text-gray-600 leading-relaxed"
+            as="div"
+          >
+            {product.description}
+          </DescriptionText>
 
           {/* Variants */}
           {Object.entries(variantGroups).map(([name, variants]) => (
@@ -270,7 +310,7 @@ export default function ProductDetail({ product }: { product: Product }) {
               <>
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
-                  Env&iacute;os a todo Uruguay
+                  Envíos a todo Uruguay
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary" />

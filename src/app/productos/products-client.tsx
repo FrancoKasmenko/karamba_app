@@ -22,7 +22,7 @@ interface Product {
   imageUrl: string | null;
   featured: boolean;
   isDigital: boolean;
-  category: { name: string; slug: string } | null;
+  categories: { name: string; slug: string }[];
 }
 
 function CategoryOptions({
@@ -93,7 +93,7 @@ export default function ProductsClient({
       result = result.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
-          p.category?.name.toLowerCase().includes(q)
+          p.categories.some((c) => c.name.toLowerCase().includes(q))
       );
     }
 
@@ -108,7 +108,7 @@ export default function ProductsClient({
       );
       if (allowed?.length) {
         result = result.filter((p) =>
-          p.category?.slug ? allowed.includes(p.category.slug) : false
+          p.categories.some((c) => allowed.includes(c.slug))
         );
       }
     }

@@ -81,7 +81,7 @@ export default async function ProductPage({ params }: Props) {
         onlineCourse: { select: { slug: true } },
         variants: true,
         minPurchaseQuantity: true,
-        category: { select: { name: true, slug: true } },
+        categories: { select: { name: true, slug: true } },
       },
     });
   } catch {
@@ -94,6 +94,6 @@ export default async function ProductPage({ params }: Props) {
     redirect(`/curso/${product.onlineCourse.slug}`);
   }
 
-  const { isOnlineCourse: _oc, onlineCourse: _c, ...forDetail } = product;
+  const { onlineCourse: _c, ...forDetail } = product;
   return <ProductDetail product={forDetail} />;
 }

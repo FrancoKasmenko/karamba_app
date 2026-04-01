@@ -1,4 +1,6 @@
-/** Recargo para pagos con Mercado Pago / tarjeta (el precio en admin = transferencia). */
+import type { CheckoutPaymentMethod } from "@prisma/client";
+
+/** Recargo para pagos con Mercado Pago / PayPal / tarjeta (el precio en admin = transferencia). */
 export const PAYMENT_CARD_SURCHARGE_RATE = 0.12;
 
 export function roundMoney(n: number): number {
@@ -11,11 +13,10 @@ export function priceWithCardFee(baseTransferPrice: number): number {
 
 export function unitPriceForPaymentMethod(
   baseTransferPrice: number,
-  method: "MERCADOPAGO" | "BANK_TRANSFER"
+  method: CheckoutPaymentMethod
 ): number {
-  return method === "MERCADOPAGO"
-    ? priceWithCardFee(baseTransferPrice)
-    : roundMoney(baseTransferPrice);
+  if (method === "BANK_TRANSFER") return roundMoney(baseTransferPrice);
+  return priceWithCardFee(baseTransferPrice);
 }
 
 /** Cuotas a mostrar en ficha de producto (orden fijo). */

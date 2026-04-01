@@ -325,19 +325,13 @@ async function main() {
         `  🖼 ${localImages.length}/${uniqueUrls.length} imágenes`
       );
 
-      // ── Categories ──
+      // ── Categories (todas las rutas del CSV → varias categorías) ──
       const catStrings = parseCategoryField(row["Categorías"]);
-      let categoryId = null;
-      let maxDepth = 0;
-
+      const categoryConnectIds = [];
       for (const catStr of catStrings) {
         const cat = await ensureCategory(catStr);
-        if (cat) {
-          const depth = catStr.split(" > ").length;
-          if (depth >= maxDepth) {
-            maxDepth = depth;
-            categoryId = cat.id;
-          }
+        if (cat && !categoryConnectIds.includes(cat.id)) {
+          categoryConnectIds.push(cat.id);
         }
       }
 
@@ -352,7 +346,13 @@ async function main() {
           images: localImages,
           featured,
           active,
-          categoryId,
+          ...(categoryConnectIds.length > 0
+            ? {
+                categories: {
+                  connect: categoryConnectIds.map((id) => ({ id })),
+                },
+              }
+            : {}),
         },
       });
 

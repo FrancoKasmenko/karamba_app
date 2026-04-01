@@ -167,7 +167,6 @@ export async function PUT(req: Request, context: RouteContext) {
             isDigital: false,
             fileUrl: null,
             fileName: null,
-            categoryId: null,
           },
         });
       }

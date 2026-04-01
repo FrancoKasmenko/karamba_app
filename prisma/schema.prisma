@@ -34,6 +34,7 @@ enum OrderItemType {
 enum CheckoutPaymentMethod {
   MERCADOPAGO
   BANK_TRANSFER
+  PAYPAL
 }
 
 enum TransferReceiptStatus {
@@ -45,6 +46,12 @@ enum TransferReceiptStatus {
 enum CouponDiscountType {
   PERCENT
   FIXED_AMOUNT
+}
+
+enum CartStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
 }
 
 enum SiteModalFrequency {
@@ -76,29 +83,47 @@ model PaymentAccount {
   @@index([active, sortOrder])
 }
 
+model ShippingZone {
+  id                String   @id @default(cuid())
+  name              String
+  price             Float
+  departmentNames   String[] @default([])
+  cityNames         String[] @default([])
+  active            Boolean  @default(true)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([active, sortOrder])
+}
+
 model User {
-  id             String    @id @default(cuid())
-  name           String?
-  email          String    @unique
-  hashedPassword String
-  phone          String?
-  address        String?
-  city           String?
-  role           Role      @default(USER)
+  id                   String    @id @default(cuid())
+  name                 String?
+  email                String    @unique
+  hashedPassword       String
+  phone                String?
+  address              String?
+  city                 String?
+  departamento         String?
+  postalCode           String?
+  role                 Role      @default(USER)
   /// TOTP (Google/Microsoft Authenticator) — solo exigido en login si role ADMIN y está activo
-  twoFactorEnabled     Boolean  @default(false)
+  twoFactorEnabled     Boolean   @default(false)
   /// Secreto base32 cifrado (AES-256-GCM), ver lib/two-factor-crypto
   twoFactorSecret      String?
   /// Hashes bcrypt de códigos de respaldo (mostrar una sola vez al activar)
-  twoFactorBackupCodes String[] @default([])
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  orders         Order[]
-  courseBookings  CourseBooking[]
-  userOnlineCourses UserCourse[]
-  userLessonProgress UserLessonProgress[]
+  twoFactorBackupCodes String[]  @default([])
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+  orders               Order[]
+  courseBookings       CourseBooking[]
+  userOnlineCourses    UserCourse[]
+  userLessonProgress   UserLessonProgress[]
   onlineCoursePurchases UserCoursePurchase[]
-  passwordResetTokens PasswordResetToken[]
+  passwordResetTokens  PasswordResetToken[]
+  carts                Cart[]
+  analyticsEvents      AnalyticsEvent[]
 }
 
 model PasswordResetToken {
@@ -114,18 +139,18 @@ model PasswordResetToken {
 }
 
 model Category {
-  id            String     @id @default(cuid())
-  name          String
-  slug          String     @unique
-  image         String?
-  order         Int        @default(0)
-  showInNavbar  Boolean    @default(false)
-  parentId      String?
-  parent        Category?  @relation("CategoryTree", fields: [parentId], references: [id])
-  children      Category[] @relation("CategoryTree")
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  products      Product[]
+  id           String     @id @default(cuid())
+  name         String
+  slug         String     @unique
+  image        String?
+  order        Int        @default(0)
+  showInNavbar Boolean    @default(false)
+  parentId     String?
+  parent       Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children     Category[] @relation("CategoryTree")
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  products     Product[]  @relation("ProductCategories")
 
   @@index([parentId])
   @@index([showInNavbar])
@@ -151,16 +176,15 @@ model Product {
   isOnlineCourse Boolean @default(false)
   onlineCourseId String? @unique
   onlineCourse  OnlineCourse? @relation(fields: [onlineCourseId], references: [id], onDelete: SetNull)
-  categoryId  String?
-  category    Category? @relation(fields: [categoryId], references: [id])
+  categories    Category[] @relation("ProductCategories")
   /// Cantidad mínima por línea (misma variante) para añadir al carrito y completar compra
   minPurchaseQuantity Int @default(1)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   variants    Variant[]
   orderItems  OrderItem[]
+  analyticsEvents AnalyticsEvent[]
 
-  @@index([categoryId])
   @@index([slug])
   @@index([isDigital])
   @@index([isOnlineCourse])
@@ -181,40 +205,81 @@ model Variant {
 }
 
 model Order {
-  id                     String                  @id @default(cuid())
-  userId                 String
-  user                   User                    @relation(fields: [userId], references: [id])
-  items                  OrderItem[]
-  total                  Float
-  currency               String                  @default("UYU")
-  status                 OrderStatus             @default(PENDING)
-  source                 OrderSource             @default(PRODUCT)
-  checkoutPaymentMethod  CheckoutPaymentMethod  @default(MERCADOPAGO)
-  transferAccountId      String?
-  transferAccount        PaymentAccount?         @relation(fields: [transferAccountId], references: [id], onDelete: SetNull)
-  transferReceiptUrl     String?
-  transferReceiptStatus  TransferReceiptStatus  @default(NONE)
-  transferReceiptAt      DateTime?
-  paymentId              String?
-  paymentProvider        String?
-  shippingName           String?
-  shippingAddress        String?
-  shippingCity           String?
-  shippingPhone          String?
-  notes                  String?
-  couponCode             String?
-  couponDiscount         Float                   @default(0)
-  couponRedemptionRecorded Boolean               @default(false)
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
-  courseBooking          CourseBooking?
-  onlineCoursePurchases  UserCoursePurchase[]
+  id                       String                  @id @default(cuid())
+  userId                   String
+  user                     User                    @relation(fields: [userId], references: [id])
+  items                    OrderItem[]
+  total                    Float
+  currency                 String                  @default("UYU")
+  status                   OrderStatus             @default(PENDING)
+  source                   OrderSource             @default(PRODUCT)
+  checkoutPaymentMethod    CheckoutPaymentMethod   @default(MERCADOPAGO)
+  transferAccountId        String?
+  transferAccount          PaymentAccount?         @relation(fields: [transferAccountId], references: [id], onDelete: SetNull)
+  transferReceiptUrl       String?
+  transferReceiptStatus    TransferReceiptStatus   @default(NONE)
+  transferReceiptAt        DateTime?
+  paymentId                String?
+  paymentProvider          String?
+  shippingName             String?
+  shippingAddress          String?
+  shippingCity             String?
+  shippingPhone            String?
+  notes                    String?
+  couponCode               String?
+  couponDiscount           Float                   @default(0)
+  couponRedemptionRecorded Boolean                 @default(false)
+  /// Monto exacto enviado a PayPal (Orders API) al crear el pago; validación en capture.
+  paypalOrderAmountValue   Float?
+  paypalOrderCurrency      String?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  courseBooking            CourseBooking?
+  onlineCoursePurchases    UserCoursePurchase[]
+  cart                     Cart?
 
   @@index([userId])
   @@index([paymentId])
   @@index([source])
   @@index([transferAccountId])
   @@index([couponCode])
+}
+
+model Cart {
+  id             String     @id @default(cuid())
+  sessionId      String
+  userId         String?
+  status         CartStatus @default(ACTIVE)
+  total          Float      @default(0)
+  lastActivityAt DateTime   @default(now())
+  abandonedAt    DateTime?
+  completedAt    DateTime?
+  orderId        String?    @unique
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  order          Order?     @relation(fields: [orderId], references: [id])
+  user           User?      @relation(fields: [userId], references: [id])
+
+  @@index([sessionId, status])
+  @@index([status, abandonedAt])
+  @@index([status, lastActivityAt])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  type      String
+  sessionId String
+  userId    String?
+  productId String?
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+  product   Product? @relation(fields: [productId], references: [id])
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([productId])
+  @@index([sessionId, createdAt])
+  @@index([type, createdAt])
 }
 
 model Coupon {
@@ -235,6 +300,10 @@ model Coupon {
   transferOnly     Boolean            @default(false)
   /// Vacío = todas las categorías; si no, el producto debe estar en la categoría o en un descendiente
   categoryIds      String[]           @default([])
+  /// Subtotal elegible mínimo (misma moneda del sitio); null = sin mínimo
+  minPurchaseAmount Float?
+  /// Tope al monto de descuento (útil sobre todo en %); null = sin tope
+  maxDiscountAmount Float?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
@@ -242,22 +311,22 @@ model Coupon {
 }
 
 model SiteModal {
-  id               String             @id @default(cuid())
-  name             String
-  active           Boolean            @default(true)
-  frequency        SiteModalFrequency @default(ONCE_PER_BROWSER)
+  id                 String             @id @default(cuid())
+  name               String
+  active             Boolean            @default(true)
+  frequency          SiteModalFrequency @default(ONCE_PER_BROWSER)
   /// Solo para AGAIN_AFTER_DAYS
   showAgainAfterDays Int?
-  layout           SiteModalLayout    @default(TEXT_LOGO)
-  title            String?
-  body             String?            @db.Text
-  imageUrl         String?
-  ctaLabel         String?
-  ctaHref          String?
-  dismissLabel     String             @default("Cerrar")
-  sortOrder        Int                @default(0)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  layout             SiteModalLayout    @default(TEXT_LOGO)
+  title              String?
+  body               String?            @db.Text
+  imageUrl           String?
+  ctaLabel           String?
+  ctaHref            String?
+  dismissLabel       String             @default("Cerrar")
+  sortOrder          Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   @@index([active, sortOrder])
 }
@@ -282,16 +351,16 @@ model OrderItem {
 }
 
 model Banner {
-  id        String   @id @default(cuid())
-  title     String?
-  subtitle  String?
+  id         String   @id @default(cuid())
+  title      String?
+  subtitle   String?
   buttonText String?
   buttonLink String?
-  image     String
-  order     Int      @default(0)
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  image      String
+  order      Int      @default(0)
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model SiteSettings {
@@ -302,6 +371,11 @@ model SiteSettings {
   mercadoPagoAccessToken String?
   mercadoPagoPublicKey   String?
   mercadoPagoEnabled     Boolean @default(false)
+  paypalClientId         String?
+  paypalClientSecret     String?
+  paypalEnabled          Boolean @default(false)
+  paypalEnvironment      String  @default("sandbox")
+  paypalCurrency         String  @default("UYU")
   contactEmail           String?
   contactPhone           String?
   contactAddress         String?
@@ -310,6 +384,8 @@ model SiteSettings {
   whatsapp               String?
   /// JSON: [{ "image": "url", "url": "permalink" }] — feed manual si el scrape falla
   instagramFeedManual    Json?
+  /// Código de cupón (mayúsculas) enviado en el mail de bienvenida al registrarse; debe existir en Cupón y estar activo.
+  welcomeCouponCode      String?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 }
@@ -330,7 +406,7 @@ model Course {
   currency    String          @default("UYU")
   image       String?
   duration    String?
-  courseType   CourseType      @default(PRESENCIAL)
+  courseType  CourseType      @default(PRESENCIAL)
   published   Boolean         @default(false)
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
@@ -347,7 +423,7 @@ enum BookingStatus {
 
 model CourseSession {
   id             String          @id @default(cuid())
-  courseId        String
+  courseId       String
   course         Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
   date           DateTime
   startTime      String
@@ -369,7 +445,7 @@ model CourseBooking {
   userId          String
   user            User          @relation(fields: [userId], references: [id])
   courseSessionId String
-  courseSession   CourseSession  @relation(fields: [courseSessionId], references: [id], onDelete: Cascade)
+  courseSession   CourseSession @relation(fields: [courseSessionId], references: [id], onDelete: Cascade)
   orderId         String?       @unique
   order           Order?        @relation(fields: [orderId], references: [id], onDelete: SetNull)
   status          BookingStatus @default(PENDING)
@@ -392,17 +468,17 @@ enum CourseOnlineLevel {
 }
 
 model OnlineCourse {
-  id                   String            @id @default(cuid())
+  id                   String               @id @default(cuid())
   title                String
-  slug                 String            @unique
-  description          String?           @db.Text
+  slug                 String               @unique
+  description          String?              @db.Text
   image                String?
-  price                Float             @default(0)
-  level                CourseOnlineLevel @default(BASIC)
-  isPublished          Boolean           @default(false)
+  price                Float                @default(0)
+  level                CourseOnlineLevel    @default(BASIC)
+  isPublished          Boolean              @default(false)
   totalDurationMinutes Int?
-  createdAt            DateTime          @default(now())
-  updatedAt            DateTime          @updatedAt
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
   modules              CourseModule[]
   resources            CourseResource[]
   products             Product[]
@@ -414,30 +490,30 @@ model OnlineCourse {
 }
 
 model CourseModule {
-  id        String       @id @default(cuid())
+  id        String         @id @default(cuid())
   courseId  String
-  course    OnlineCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course    OnlineCourse   @relation(fields: [courseId], references: [id], onDelete: Cascade)
   title     String
-  order     Int          @default(0)
+  order     Int            @default(0)
   lessons   CourseLesson[]
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@index([courseId])
 }
 
 model CourseLesson {
-  id               String   @id @default(cuid())
+  id               String               @id @default(cuid())
   moduleId         String
-  module           CourseModule @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  module           CourseModule         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
   title            String
   /** URL YouTube/Vimeo o ruta subida: /api/uploads/course-videos/… */
   videoUrl         String?
-  content          String?  @db.Text
+  content          String?              @db.Text
   durationMinutes  Int?
-  order            Int      @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  order            Int                  @default(0)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
   progressRecords  UserLessonProgress[]
 
   @@index([moduleId])

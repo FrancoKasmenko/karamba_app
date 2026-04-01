@@ -15,6 +15,7 @@ interface Settings {
   facebook: string | null;
   whatsapp: string | null;
   instagramFeedManual: string;
+  welcomeCouponCode: string;
 }
 
 export default function AdminConfigPage() {
@@ -28,6 +29,7 @@ export default function AdminConfigPage() {
     facebook: "",
     whatsapp: "",
     instagramFeedManual: "[]",
+    welcomeCouponCode: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -54,6 +56,11 @@ export default function AdminConfigPage() {
           facebook: data.facebook || "",
           whatsapp: data.whatsapp || "",
           instagramFeedManual: manualStr,
+          welcomeCouponCode:
+            typeof (data as { welcomeCouponCode?: string }).welcomeCouponCode ===
+            "string"
+              ? (data as { welcomeCouponCode: string }).welcomeCouponCode
+              : "",
         });
         setLoading(false);
       });
@@ -182,6 +189,32 @@ export default function AdminConfigPage() {
                 className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm"
               />
             </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-primary-light/30 p-6 space-y-4">
+          <h2 className="font-display text-lg font-semibold text-gray-800">
+            Cupón de bienvenida (clientes nuevos)
+          </h2>
+          <p className="text-sm text-gray-500">
+            Creá el cupón en{" "}
+            <span className="font-medium text-gray-700">Admin → Cupones</span>.
+            El código que indiques acá se incluye en el correo automático cuando
+            alguien se registra (solo si el cupón existe y está activo).
+          </p>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Código del cupón
+            </label>
+            <input
+              type="text"
+              value={form.welcomeCouponCode}
+              onChange={(e) =>
+                setForm({ ...form, welcomeCouponCode: e.target.value })
+              }
+              placeholder="Ej. BIENVENIDA10"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-sm font-mono uppercase"
+            />
           </div>
         </div>
 

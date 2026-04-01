@@ -73,7 +73,7 @@ interface ProductData {
   imageUrl: string;
   featured: boolean;
   active: boolean;
-  categoryId: string;
+  categoryIds: string[];
   variants: Variant[];
   isDigital: boolean;
   digitalFiles: DigitalFileRow[];
@@ -90,7 +90,7 @@ const defaultProduct: ProductData = {
   imageUrl: "",
   featured: false,
   active: true,
-  categoryId: "",
+  categoryIds: [],
   variants: [],
   isDigital: false,
   digitalFiles: [],
@@ -103,6 +103,8 @@ export default function ProductForm({
   initialData?: Partial<ProductData> & {
     id?: string;
     variants?: Variant[];
+    /** Compat: migración desde categoría única */
+    categoryId?: string;
     /** Compat: si no hay digitalFiles, se usa el primer archivo legacy */
     fileUrl?: string;
     fileName?: string;
@@ -114,6 +116,12 @@ export default function ProductForm({
   const [form, setForm] = useState<ProductData>(() => ({
     ...defaultProduct,
     ...(initialData || {}),
+    categoryIds:
+      initialData?.categoryIds?.length ?
+        [...initialData.categoryIds]
+      : initialData?.categoryId ?
+        [initialData.categoryId]
+      : defaultProduct.categoryIds,
     variants: initialData?.variants ?? defaultProduct.variants,
     isDigital: Boolean(initialData?.isDigital),
     digitalFiles:
@@ -176,7 +184,7 @@ export default function ProductForm({
           imageUrl: form.imageUrl,
           featured: form.featured,
           active: form.active,
-          categoryId: form.categoryId,
+          categoryIds: form.categoryIds,
           variants: form.variants,
           isDigital: form.isDigital,
           digitalFiles: form.isDigital ? form.digitalFiles : [],
@@ -342,8 +350,13 @@ export default function ProductForm({
               onChange={(e) =>
                 setForm({ ...form, description: e.target.value })
               }
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm resize-none"
+              placeholder="Podés usar Enter para nuevos párrafos o líneas."
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm resize-y min-h-[100px]"
             />
+            <p className="text-xs text-gray-400 mt-1">
+              Los saltos de línea se muestran igual en la tienda (texto plano;
+              rich text en una futura versión).
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -396,23 +409,44 @@ export default function ProductForm({
             </p>
           </div>
 
-          {/* Category selector */}
+          {/* Categorías (múltiples) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Categoría
+              Categorías
             </label>
-            <select
-              value={form.categoryId}
-              onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-all text-sm"
-            >
-              <option value="">Sin categoría</option>
-              {flatCategories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.label}
-                </option>
-              ))}
-            </select>
+            <p className="text-xs text-gray-500 mb-2">
+              Marcá todas las que apliquen. El producto aparece al filtrar por
+              cualquiera de ellas.
+            </p>
+            <div className="max-h-52 overflow-y-auto rounded-xl border border-gray-200 bg-soft-gray/30 p-3 space-y-2">
+              {flatCategories.length === 0 ? (
+                <p className="text-sm text-gray-500">Cargando categorías…</p>
+              ) : (
+                flatCategories.map((cat) => (
+                  <label
+                    key={cat.id}
+                    className="flex items-start gap-2.5 text-sm cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={form.categoryIds.includes(cat.id)}
+                      onChange={() => {
+                        setForm((f) => ({
+                          ...f,
+                          categoryIds: f.categoryIds.includes(cat.id)
+                            ? f.categoryIds.filter((x) => x !== cat.id)
+                            : [...f.categoryIds, cat.id],
+                        }));
+                      }}
+                      className="mt-0.5 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-gray-700 whitespace-pre-wrap font-mono text-[13px] leading-snug">
+                      {cat.label}
+                    </span>
+                  </label>
+                ))
+              )}
+            </div>
           </div>
 
           <div>

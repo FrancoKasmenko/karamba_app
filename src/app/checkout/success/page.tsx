@@ -16,6 +16,7 @@ import {
 } from "react-icons/fi";
 import { FaWhatsapp } from "react-icons/fa";
 import Button from "@/components/ui/button";
+import { trackAnalytics } from "@/lib/analytics-client";
 
 interface DigitalRow {
   productId: string;
@@ -30,6 +31,7 @@ function SuccessContent() {
   const params = useSearchParams();
   const { status: sessionStatus } = useSession();
   const confirmSent = useRef(false);
+  const purchaseTracked = useRef(false);
   const [digital, setDigital] = useState<DigitalRow[]>([]);
   const [digitalLoading, setDigitalLoading] = useState(false);
   const [onlineCourseOnly, setOnlineCourseOnly] = useState(false);
@@ -62,6 +64,31 @@ function SuccessContent() {
       confirmSent.current = false;
     });
   }, [sessionStatus, orderId, paymentId, isPending, mpSaysApproved]);
+
+  useEffect(() => {
+    if (!orderId || sessionStatus !== "authenticated") return;
+    if (purchaseTracked.current) return;
+    purchaseTracked.current = true;
+    void fetch(api(`/api/orders/${orderId}/summary`))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { total?: number } | null) => {
+        trackAnalytics({
+          type: "purchase",
+          metadata: {
+            orderId,
+            value: typeof d?.total === "number" ? d.total : undefined,
+            currency: "UYU",
+            channel: "mercadopago_success",
+          },
+        });
+      })
+      .catch(() => {
+        trackAnalytics({
+          type: "purchase",
+          metadata: { orderId, currency: "UYU", channel: "mercadopago_success" },
+        });
+      });
+  }, [orderId, sessionStatus]);
 
   useEffect(() => {
     if (!orderId || sessionStatus !== "authenticated") {
@@ -165,96 +192,69 @@ function SuccessContent() {
         </motion.div>
       )}
 
-      {orderId && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="bg-white rounded-2xl border border-violet-100 p-5 sm:p-6 mb-6 shadow-sm"
-        >
-          <h2 className="font-bold text-warm-gray text-sm mb-3 uppercase tracking-wider flex items-center gap-2">
-            <FiDownload className="text-violet-600" size={16} />
-            Productos descargables
-          </h2>
-          {sessionStatus === "loading" && (
-            <div className="flex justify-center py-4">
-              <div className="w-6 h-6 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
-            </div>
-          )}
-          {sessionStatus === "unauthenticated" && (
-            <p className="text-sm text-gray-600">
-              Si tu pedido incluye archivos digitales,{" "}
-              <Link
-                href="/login"
-                className="font-semibold text-violet-700 underline"
-              >
-                iniciá sesión
-              </Link>{" "}
-              con la misma cuenta para descargarlos desde esta página o desde{" "}
-              <Link href="/perfil" className="font-semibold text-violet-700 underline">
-                Mi cuenta → Mis descargas
-              </Link>
-              .
-            </p>
-          )}
-          {sessionStatus === "authenticated" && digitalLoading && (
-            <div className="flex justify-center py-6">
-              <div className="w-8 h-8 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
-            </div>
-          )}
-          {sessionStatus === "authenticated" &&
-            !digitalLoading &&
-            digital.length > 0 && (
-              <div className="space-y-3">
-                {digital.map((row) => {
-                  const fileLinks =
-                    row.files?.length ?
-                      row.files
-                    : [{ fileName: row.fileName || "archivo", index: 0 }];
-                  return (
-                    <div
-                      key={row.productId}
-                      className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-violet-50/40 p-4"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-warm-gray truncate">
-                          {row.productName}
+      {orderId &&
+        sessionStatus === "authenticated" &&
+        !digitalLoading &&
+        digital.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="bg-white rounded-2xl border border-violet-100 p-5 sm:p-6 mb-6 shadow-sm"
+          >
+            <h2 className="font-bold text-warm-gray text-sm mb-3 uppercase tracking-wider flex items-center gap-2">
+              <FiDownload className="text-violet-600" size={16} />
+              Productos descargables
+            </h2>
+            <div className="space-y-3">
+              {digital.map((row) => {
+                const fileLinks =
+                  row.files?.length ?
+                    row.files
+                  : [{ fileName: row.fileName || "archivo", index: 0 }];
+                return (
+                  <div
+                    key={row.productId}
+                    className="flex flex-col gap-3 rounded-xl border border-gray-100 bg-violet-50/40 p-4"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-warm-gray truncate">
+                        {row.productName}
+                      </p>
+                      {!row.canDownload && (
+                        <p className="text-xs text-amber-700 mt-1">
+                          La descarga se habilita cuando el pago quede confirmado en
+                          el sistema.
                         </p>
-                        {!row.canDownload && (
-                          <p className="text-xs text-amber-700 mt-1">
-                            La descarga se habilita cuando el pago quede confirmado
-                            en el sistema.
-                          </p>
-                        )}
-                      </div>
-                      {row.canDownload ?
-                        <div className="flex flex-col gap-2">
-                          {fileLinks.map((f) => (
-                            <a
-                              key={`${row.productId}-${f.index}`}
-                              href={api(
-                                `/api/products/download?productId=${encodeURIComponent(row.productId)}&fileIndex=${f.index}`
-                              )}
-                              className="inline-flex items-center justify-center gap-2 shrink-0 rounded-full bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 hover:bg-violet-700 transition-colors"
-                            >
-                              <FiDownload size={16} />
-                              <span className="truncate max-w-full">
-                                Descargar{f.fileName ? `: ${f.fileName}` : ""}
-                              </span>
-                            </a>
-                          ))}
-                        </div>
-                      : <span className="text-xs text-gray-400">
-                          Podés volver cuando el estado sea &quot;Pagado&quot;
-                        </span>
-                      }
+                      )}
                     </div>
-                  );
-                })}
-              </div>
-            )}
-        </motion.div>
-      )}
+                    {row.canDownload ?
+                      <div className="flex flex-col gap-2">
+                        {fileLinks.map((f) => (
+                          <a
+                            key={`${row.productId}-${f.index}`}
+                            href={api(
+                              `/api/products/download?productId=${encodeURIComponent(row.productId)}&fileIndex=${f.index}`
+                            )}
+                            className="inline-flex items-center justify-center gap-2 shrink-0 rounded-full bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 hover:bg-violet-700 transition-colors"
+                          >
+                            <FiDownload size={16} />
+                            <span className="truncate max-w-full">
+                              Descargar{f.fileName ? `: ${f.fileName}` : ""}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
+                    : <span className="text-xs text-gray-400">
+                        Podés volver cuando el estado sea &quot;Pagado&quot;
+                      </span>
+                    }
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
 
       {/* Next steps */}
       <motion.div

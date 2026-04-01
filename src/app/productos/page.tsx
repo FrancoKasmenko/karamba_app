@@ -79,7 +79,7 @@ export default async function ProductosPage({ searchParams }: PageProps) {
     featured: boolean;
     isDigital: boolean;
     imageUrl: string | null;
-    category: { name: string; slug: string } | null;
+    categories: { name: string; slug: string }[];
   }[] = [];
 
   let categories: CategoryBranch[] = [];
@@ -110,7 +110,11 @@ export default async function ProductosPage({ searchParams }: PageProps) {
         active: true,
         isOnlineCourse: false,
         ...(categoryIdsFilter?.length
-          ? { categoryId: { in: categoryIdsFilter } }
+          ? {
+              categories: {
+                some: { id: { in: categoryIdsFilter } },
+              },
+            }
           : {}),
       },
       orderBy: { createdAt: "desc" },
@@ -124,7 +128,7 @@ export default async function ProductosPage({ searchParams }: PageProps) {
         featured: true,
         isDigital: true,
         imageUrl: true,
-        category: { select: { name: true, slug: true } },
+        categories: { select: { name: true, slug: true } },
       },
     });
   } catch {

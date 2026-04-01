@@ -21,6 +21,8 @@ interface Coupon {
   excludeOnSale: boolean;
   transferOnly: boolean;
   categoryIds: string[];
+  minPurchaseAmount: number | null;
+  maxDiscountAmount: number | null;
 }
 
 interface CatRow {
@@ -67,6 +69,8 @@ type FormState = {
   excludeOnSale: boolean;
   transferOnly: boolean;
   categoryIds: string[];
+  minPurchaseAmount: string;
+  maxDiscountAmount: string;
 };
 
 const emptyForm: FormState = {
@@ -82,6 +86,8 @@ const emptyForm: FormState = {
   excludeOnSale: false,
   transferOnly: false,
   categoryIds: [],
+  minPurchaseAmount: "",
+  maxDiscountAmount: "",
 };
 
 export default function AdminCuponesPage() {
@@ -134,6 +140,10 @@ export default function AdminCuponesPage() {
       excludeOnSale: c.excludeOnSale,
       transferOnly: c.transferOnly,
       categoryIds: [...c.categoryIds],
+      minPurchaseAmount:
+        c.minPurchaseAmount != null ? String(c.minPurchaseAmount) : "",
+      maxDiscountAmount:
+        c.maxDiscountAmount != null ? String(c.maxDiscountAmount) : "",
     });
   };
 
@@ -151,6 +161,8 @@ export default function AdminCuponesPage() {
       excludeOnSale: form.excludeOnSale,
       transferOnly: form.transferOnly,
       categoryIds: form.categoryIds,
+      minPurchaseAmount: form.minPurchaseAmount.trim() || null,
+      maxDiscountAmount: form.maxDiscountAmount.trim() || null,
     };
 
     try {
@@ -210,17 +222,20 @@ export default function AdminCuponesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-extrabold text-warm-gray">Cupones</h1>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
+        <h1 className="text-xl sm:text-2xl font-extrabold text-warm-gray">
+          Cupones
+        </h1>
         <Button
           size="sm"
+          className="w-full sm:w-auto justify-center touch-manipulation"
           onClick={() => {
             setCreating(true);
             setEditing(null);
             setForm(emptyForm);
           }}
         >
-          <FiPlus className="mr-1" /> Nuevo
+          <FiPlus className="mr-1 shrink-0" /> Nuevo
         </Button>
       </div>
 
@@ -228,8 +243,9 @@ export default function AdminCuponesPage() {
         Los cupones se validan en el checkout. Podés excluir productos en oferta,
         limitar a transferencia bancaria, restringir por categoría (incluye
         subcategorías si coinciden los padres), y definir vigencia y tope de usos.
-        El descuento se reparte proporcionalmente entre las líneas del carrito que
-        aplican.
+        Podés exigir un mínimo de compra sobre el subtotal elegible (productos que
+        aplican al cupón) y un tope máximo al monto descontado. El descuento se
+        reparte proporcionalmente entre las líneas del carrito que aplican.
       </p>
 
       {(creating || editing) && (
@@ -353,6 +369,38 @@ export default function AdminCuponesPage() {
                 }
               />
             </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                Mínimo de compra ($, subtotal elegible; vacío = sin mínimo)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="ej. 1500"
+                value={form.minPurchaseAmount}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, minPurchaseAmount: e.target.value }))
+                }
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">
+                Descuento máximo ($, vacío = sin tope)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                placeholder="ej. 500"
+                value={form.maxDiscountAmount}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, maxDiscountAmount: e.target.value }))
+                }
+              />
+            </div>
             <div className="flex flex-col gap-2 text-sm">
               <label className="flex items-center gap-2">
                 <input
@@ -426,6 +474,12 @@ export default function AdminCuponesPage() {
                   {c.maxRedemptions != null ? ` / ${c.maxRedemptions}` : ""}
                   {c.transferOnly ? " · solo transferencia" : ""}
                   {c.excludeOnSale ? " · sin ofertas" : ""}
+                  {c.minPurchaseAmount != null && c.minPurchaseAmount > 0
+                    ? ` · mín. $${c.minPurchaseAmount}`
+                    : ""}
+                  {c.maxDiscountAmount != null && c.maxDiscountAmount > 0
+                    ? ` · tope desc. $${c.maxDiscountAmount}`
+                    : ""}
                 </p>
               </div>
               <div className="flex items-center gap-2">

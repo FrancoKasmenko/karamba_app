@@ -6,6 +6,7 @@ import { useCartStore } from "@/store/cart";
 import { resolveProductImage } from "@/lib/image-url";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
+import { trackAnalytics } from "@/lib/analytics-client";
 
 export default function CourseBuyButton({
   product,
@@ -41,6 +42,18 @@ export default function CourseBuyButton({
       toast.error("No se pudo agregar al carrito (cantidad mínima).");
       return;
     }
+    const cartTotal = useCartStore.getState().total();
+    trackAnalytics({
+      type: "add_to_cart",
+      productId: product.id,
+      metadata: {
+        slug: product.slug,
+        quantity: 1,
+        cartTotal,
+        currency: "UYU",
+        source: "online_course_cta",
+      },
+    });
     toast.success("Curso agregado al carrito");
   };
 

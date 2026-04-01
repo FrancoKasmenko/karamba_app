@@ -22,6 +22,10 @@ export async function GET() {
     mercadoPagoAccessToken: settings.mercadoPagoAccessToken
       ? "••••••••" + settings.mercadoPagoAccessToken.slice(-8)
       : null,
+    paypalSecretConfigured: Boolean(settings.paypalClientSecret?.trim()),
+    paypalClientSecret: settings.paypalClientSecret
+      ? "••••••••" + settings.paypalClientSecret.slice(-4)
+      : null,
   });
 }
 
@@ -53,6 +57,39 @@ export async function PUT(req: Request) {
   if (body.mercadoPagoEnabled !== undefined) {
     data.mercadoPagoEnabled = body.mercadoPagoEnabled;
   }
+  if (body.paypalClientId !== undefined) {
+    data.paypalClientId =
+      typeof body.paypalClientId === "string"
+        ? body.paypalClientId.trim() || null
+        : null;
+  }
+  if (body.paypalClientSecret !== undefined) {
+    const raw = body.paypalClientSecret;
+    if (raw === null || raw === "") {
+      data.paypalClientSecret = null;
+    } else if (typeof raw === "string") {
+      const t = raw.trim();
+      if (t.length === 0) {
+        data.paypalClientSecret = null;
+      } else if (!t.startsWith("••")) {
+        data.paypalClientSecret = t;
+      }
+    }
+  }
+  if (body.paypalEnabled !== undefined) {
+    data.paypalEnabled = Boolean(body.paypalEnabled);
+  }
+  if (body.paypalEnvironment !== undefined) {
+    const e = String(body.paypalEnvironment).toLowerCase();
+    data.paypalEnvironment = e === "live" ? "live" : "sandbox";
+  }
+  if (body.paypalCurrency !== undefined) {
+    const c = String(body.paypalCurrency ?? "UYU")
+      .trim()
+      .toUpperCase()
+      .slice(0, 8);
+    data.paypalCurrency = c || "UYU";
+  }
   if (body.contactEmail !== undefined) data.contactEmail = body.contactEmail;
   if (body.contactPhone !== undefined) data.contactPhone = body.contactPhone;
   if (body.contactAddress !== undefined) data.contactAddress = body.contactAddress;
@@ -61,6 +98,31 @@ export async function PUT(req: Request) {
   if (body.whatsapp !== undefined) data.whatsapp = body.whatsapp;
   if (body.siteName !== undefined) data.siteName = body.siteName;
   if (body.siteDescription !== undefined) data.siteDescription = body.siteDescription;
+  if (body.welcomeCouponCode !== undefined) {
+    const w = typeof body.welcomeCouponCode === "string" ? body.welcomeCouponCode.trim() : "";
+    if (!w) {
+      data.welcomeCouponCode = null;
+    } else {
+      const code = w.toUpperCase();
+      const exists = await prisma.coupon.findUnique({
+        where: { code },
+        select: { id: true, active: true },
+      });
+      if (!exists) {
+        return NextResponse.json(
+          { error: `No existe un cupón con el código «${code}». Crealo primero en Admin → Cupones.` },
+          { status: 400 }
+        );
+      }
+      if (!exists.active) {
+        return NextResponse.json(
+          { error: "Ese cupón existe pero está inactivo. Activarlo antes de asignarlo al mail de bienvenida." },
+          { status: 400 }
+        );
+      }
+      data.welcomeCouponCode = code;
+    }
+  }
   if (body.instagramFeedManual !== undefined) {
     let raw: unknown = body.instagramFeedManual;
     if (typeof raw === "string") {
@@ -110,6 +172,10 @@ export async function PUT(req: Request) {
     mercadoPagoTokenConfigured: Boolean(settings.mercadoPagoAccessToken),
     mercadoPagoAccessToken: settings.mercadoPagoAccessToken
       ? "••••••••" + settings.mercadoPagoAccessToken.slice(-8)
+      : null,
+    paypalSecretConfigured: Boolean(settings.paypalClientSecret?.trim()),
+    paypalClientSecret: settings.paypalClientSecret
+      ? "••••••••" + settings.paypalClientSecret.slice(-4)
       : null,
     instagramFeedSyncWarnings,
   });

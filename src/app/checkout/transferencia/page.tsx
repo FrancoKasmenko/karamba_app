@@ -1,7 +1,7 @@
 "use client";
 import { api } from "@/lib/public-api";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -13,6 +13,7 @@ import { resolveMediaPath } from "@/lib/image-url";
 import Button from "@/components/ui/button";
 import toast from "react-hot-toast";
 import BankLogo from "@/components/ui/bank-logo";
+import { trackAnalytics } from "@/lib/analytics-client";
 
 interface Summary {
   id: string;
@@ -36,6 +37,7 @@ function TransferContent() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const purchaseTracked = useRef(false);
 
   useEffect(() => {
     if (!orderId) {
@@ -46,7 +48,24 @@ function TransferContent() {
       .then((r) => r.json())
       .then((d) => {
         if (d.error) setSummary(null);
-        else setSummary(d);
+        else {
+          setSummary(d);
+          if (
+            !purchaseTracked.current &&
+            typeof d.total === "number"
+          ) {
+            purchaseTracked.current = true;
+            trackAnalytics({
+              type: "purchase",
+              metadata: {
+                orderId,
+                value: d.total,
+                currency: "UYU",
+                channel: "bank_transfer",
+              },
+            });
+          }
+        }
       })
       .catch(() => setSummary(null))
       .finally(() => setLoading(false));

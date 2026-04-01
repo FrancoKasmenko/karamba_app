@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { CheckoutPaymentMethod, OrderSource, OrderStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getBaseUrl } from "@/lib/base-url";
 import { api } from "@/lib/public-api";
@@ -17,12 +18,62 @@ export const EmailEventType = {
   AUTH_PASSWORD_RESET_REQUEST: "AUTH_PASSWORD_RESET_REQUEST",
   AUTH_PASSWORD_CHANGED: "AUTH_PASSWORD_CHANGED",
   ORDER_CREATED: "ORDER_CREATED",
+  ORDER_STAFF_NEW: "ORDER_STAFF_NEW",
   ORDER_PAID: "ORDER_PAID",
   ORDER_REJECTED: "ORDER_REJECTED",
   TRANSFER_REMINDER: "TRANSFER_REMINDER",
   COURSE_ACCESS: "COURSE_ACCESS",
   COURSE_COMPLETED: "COURSE_COMPLETED",
 } as const;
+
+/** Destinatarios internos: aviso de cada pedido nuevo (pendiente o ya pagado). Sobrescribible con STAFF_ORDER_NOTIFY_EMAILS (correos separados por coma). */
+const DEFAULT_STAFF_ORDER_NOTIFY_EMAILS = [
+  "fkasmenko@gmail.com",
+  "karamba@vera.com.uy",
+  "kemko29@gmail.com",
+  "somoskarambatv@gmail.com",
+] as const;
+
+function staffOrderNotifyRecipients(): string[] {
+  const raw = process.env.STAFF_ORDER_NOTIFY_EMAILS?.trim();
+  if (!raw) {
+    return [...DEFAULT_STAFF_ORDER_NOTIFY_EMAILS];
+  }
+  const parsed = raw
+    .split(/[,;]+/)
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => e.length > 3 && e.includes("@"));
+  return parsed.length > 0 ? parsed : [...DEFAULT_STAFF_ORDER_NOTIFY_EMAILS];
+}
+
+function orderStatusLabelStaff(status: OrderStatus): string {
+  const map: Record<OrderStatus, string> = {
+    PENDING: "Pendiente de pago",
+    PROCESSING: "Procesando",
+    PAID: "Pagado",
+    SHIPPED: "Enviado",
+    DELIVERED: "Entregado",
+    CANCELLED: "Cancelado",
+  };
+  return map[status] ?? status;
+}
+
+function checkoutPaymentMethodLabel(m: CheckoutPaymentMethod): string {
+  const map: Record<CheckoutPaymentMethod, string> = {
+    MERCADOPAGO: "Mercado Pago",
+    BANK_TRANSFER: "Transferencia bancaria",
+    PAYPAL: "PayPal",
+  };
+  return map[m] ?? m;
+}
+
+function orderSourceLabel(source: OrderSource): string {
+  const map: Record<OrderSource, string> = {
+    PRODUCT: "Tienda",
+    COURSE: "Curso presencial",
+  };
+  return map[source] ?? source;
+}
 
 function certUrl(courseId: string): string {
   return `${getBaseUrl()}${api(`/api/courses/certificate/${courseId}`)}`;
@@ -153,6 +204,41 @@ export async function notifyPasswordChangedEmail(userId: string): Promise<void> 
   });
 }
 
+async function welcomeCouponCalloutHtml(): Promise<string> {
+  const settings = await prisma.siteSettings.findUnique({
+    where: { id: "main" },
+    select: { welcomeCouponCode: true },
+  });
+  const raw = settings?.welcomeCouponCode?.trim();
+  if (!raw) return "";
+  const code = raw.toUpperCase();
+  const coupon = await prisma.coupon.findUnique({
+    where: { code },
+    select: {
+      active: true,
+      description: true,
+      minPurchaseAmount: true,
+      maxDiscountAmount: true,
+    },
+  });
+  if (!coupon?.active) return "";
+  const extra = coupon.description?.trim()
+    ? ` ${escapeHtml(coupon.description.trim())}`
+    : "";
+  const hints: string[] = [];
+  if (coupon.minPurchaseAmount != null && coupon.minPurchaseAmount > 0) {
+    hints.push(`Compra mínima ${formatPrice(coupon.minPurchaseAmount)}.`);
+  }
+  if (coupon.maxDiscountAmount != null && coupon.maxDiscountAmount > 0) {
+    hints.push(`Descuento máximo ${formatPrice(coupon.maxDiscountAmount)}.`);
+  }
+  const hintHtml = hints.length ? ` ${escapeHtml(hints.join(" "))}` : "";
+  return emailCallout(
+    `<strong>Regalo por ser cliente nuevo:</strong> en tu primera compra podés usar el cupón <span style="font-family:ui-monospace,monospace;font-size:15px;font-weight:700;letter-spacing:0.04em;">${escapeHtml(code)}</span> en el checkout.${extra}${hintHtml}`,
+    "mint"
+  );
+}
+
 export async function notifyWelcomeEmail(userId: string): Promise<void> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -160,11 +246,15 @@ export async function notifyWelcomeEmail(userId: string): Promise<void> {
   });
   if (!user?.email) return;
 
+  const couponHtml = await welcomeCouponCalloutHtml();
+
   const base = getBaseUrl();
   const productosUrl = `${base}/productos`;
   const html = emailShell({
     documentTitle: "Bienvenida — Karamba",
-    preheader: "Tu cuenta ya está lista",
+    preheader: couponHtml
+      ? "Tenés un cupón de bienvenida"
+      : "Tu cuenta ya está lista",
     heading: "Bienvenido a Karamba",
     subtitle: "Nos encanta tenerte del otro lado.",
     bodyHtml: `
@@ -172,6 +262,7 @@ export async function notifyWelcomeEmail(userId: string): Promise<void> {
       ${emailP(
         `Ya podés <strong>explorar productos</strong>, armar tu carrito y acceder a <strong>tus pedidos y cursos</strong> desde tu perfil cuando quieras.`
       )}
+      ${couponHtml}
       ${emailP(
         `Si necesitás ayuda en cualquier momento, <strong>estamos para ayudarte</strong>: escribinos a <a href="mailto:contacto@karamba.com.uy" style="color:#ec4899;font-weight:600;">contacto@karamba.com.uy</a>.`
       )}
@@ -221,15 +312,10 @@ function orderHasPhysicalItems(
   });
 }
 
-export async function notifyOrderCreated(
-  orderId: string,
-  opts?: { force?: boolean }
-): Promise<void> {
-  const order = await loadOrderForEmail(orderId);
-  if (!order?.user?.email) return;
-
-  const short = orderShortId(orderId);
-  const lines = order.items
+function orderLinesTableHtml(
+  order: NonNullable<Awaited<ReturnType<typeof loadOrderForEmail>>>
+): string {
+  return order.items
     .map(
       (i) =>
         `<tr>
@@ -238,25 +324,103 @@ export async function notifyOrderCreated(
         </tr>`
     )
     .join("");
+}
 
-  const transferNote =
-    order.checkoutPaymentMethod === "BANK_TRANSFER"
-      ? emailCallout(
-          `Elegiste <strong>transferencia</strong>. En tu pedido tenés los datos bancarios. Cuando pagues, <strong>subí el comprobante</strong> desde el enlace de tu pedido para que podamos confirmarlo.`,
-          "amber"
-        )
-      : emailCallout(
-          `Te avisaremos cuando <strong>se confirme el pago</strong>. Mientras tanto podés seguir el estado del pedido desde tu perfil.`,
-          "lila"
-        );
+/** Aviso interno: cada compra registrada en la web (pendiente o ya pagada). */
+export async function notifyStaffOrderPlaced(
+  orderId: string,
+  opts?: { force?: boolean }
+): Promise<void> {
+  const order = await loadOrderForEmail(orderId);
+  if (!order) return;
 
-  const perfilUrl = `${getBaseUrl()}/perfil`;
+  const recipients = staffOrderNotifyRecipients();
+  if (recipients.length === 0) return;
+
+  const short = orderShortId(orderId);
+  const statusLabel = orderStatusLabelStaff(order.status);
+  const adminUrl = `${getBaseUrl()}${api(`/admin/ordenes/${orderId}`)}`;
+  const customerName =
+    order.shippingName?.trim() || order.user?.name?.trim() || "—";
+  const customerEmail = order.user?.email?.trim() || "—";
+  const lines = orderLinesTableHtml(order);
+  const shipBits = [
+    order.shippingAddress?.trim(),
+    order.shippingCity?.trim(),
+    order.shippingPhone?.trim(),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const html = emailShell({
-    documentTitle: `Pedido #${short} — Karamba`,
-    preheader: `Recibimos tu pedido #${short}`,
-    heading: "Recibimos tu pedido",
-    subtitle: "Gracias por confiar en Karamba.",
+    documentTitle: `Nuevo pedido #${short} — Karamba`,
+    preheader: `${statusLabel} · ${formatPrice(order.total)}`,
+    heading: "Nuevo pedido en la web",
+    subtitle: "Resumen para el equipo",
     bodyHtml: `
+      ${emailBadge(`ORDEN #${short}`)}
+      ${emailP(`<strong>Estado:</strong> ${escapeHtml(statusLabel)}`)}
+      ${emailP(`<strong>Origen:</strong> ${escapeHtml(orderSourceLabel(order.source))}`)}
+      ${emailP(`<strong>Método de pago (checkout):</strong> ${escapeHtml(checkoutPaymentMethodLabel(order.checkoutPaymentMethod))}`)}
+      ${emailP(`<strong>Cliente:</strong> ${escapeHtml(customerName)}`)}
+      ${emailP(`<strong>Email cuenta:</strong> ${escapeHtml(customerEmail)}`)}
+      ${
+        shipBits
+          ? emailP(`<strong>Envío / contacto:</strong> ${escapeHtml(shipBits)}`)
+          : ""
+      }
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;margin:8px 0 12px;">
+        <tbody>${lines}</tbody>
+      </table>
+      <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#831843;">Total: ${formatPrice(order.total)}</p>
+    `,
+    cta: { href: adminUrl, label: "Ver en administración" },
+    fallbackUrl: adminUrl,
+  });
+
+  await Promise.all(
+    recipients.map((to) =>
+      sendTransactionalEmail({
+        to,
+        subject: `Karamba — Nuevo pedido #${short} (${statusLabel})`,
+        html,
+        eventType: EmailEventType.ORDER_STAFF_NEW,
+        dedupeKey: `${orderId}:${to}`,
+        force: opts?.force,
+      })
+    )
+  );
+}
+
+export async function notifyOrderCreated(
+  orderId: string,
+  opts?: { force?: boolean }
+): Promise<void> {
+  const order = await loadOrderForEmail(orderId);
+  if (!order) return;
+
+  const short = orderShortId(orderId);
+  const lines = orderLinesTableHtml(order);
+
+  if (order.user?.email) {
+    const transferNote =
+      order.checkoutPaymentMethod === "BANK_TRANSFER"
+        ? emailCallout(
+            `Elegiste <strong>transferencia</strong>. En tu pedido tenés los datos bancarios. Cuando pagues, <strong>subí el comprobante</strong> desde el enlace de tu pedido para que podamos confirmarlo.`,
+            "amber"
+          )
+        : emailCallout(
+            `Te avisaremos cuando <strong>se confirme el pago</strong>. Mientras tanto podés seguir el estado del pedido desde tu perfil.`,
+            "lila"
+          );
+
+    const perfilUrl = `${getBaseUrl()}/perfil`;
+    const html = emailShell({
+      documentTitle: `Pedido #${short} — Karamba`,
+      preheader: `Recibimos tu pedido #${short}`,
+      heading: "Recibimos tu pedido",
+      subtitle: "Gracias por confiar en Karamba.",
+      bodyHtml: `
       ${emailBadge(`ORDEN #${short}`)}
       ${emailP(`Hola ${escapeHtml(order.user.name?.trim() || "ahí")},`)}
       ${emailP(`Ya registramos tu pedido. Este es el resumen:`)}
@@ -266,18 +430,21 @@ export async function notifyOrderCreated(
       </table>
       <p style="margin:0 0 8px;font-size:18px;font-weight:700;color:#831843;">Total: ${formatPrice(order.total)}</p>
     `,
-    cta: { href: perfilUrl, label: "Ver pedido" },
-    fallbackUrl: perfilUrl,
-  });
+      cta: { href: perfilUrl, label: "Ver pedido" },
+      fallbackUrl: perfilUrl,
+    });
 
-  await sendTransactionalEmail({
-    to: order.user.email,
-    subject: `Karamba — Pedido recibido #${short}`,
-    html,
-    eventType: EmailEventType.ORDER_CREATED,
-    dedupeKey: orderId,
-    force: opts?.force,
-  });
+    await sendTransactionalEmail({
+      to: order.user.email,
+      subject: `Karamba — Pedido recibido #${short}`,
+      html,
+      eventType: EmailEventType.ORDER_CREATED,
+      dedupeKey: orderId,
+      force: opts?.force,
+    });
+  }
+
+  await notifyStaffOrderPlaced(orderId, opts);
 }
 
 export async function notifyOrderPaid(

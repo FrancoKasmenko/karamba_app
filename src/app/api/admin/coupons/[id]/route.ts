@@ -2,6 +2,14 @@ import { NextResponse } from "next/server";
 import { CouponDiscountType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin";
+import { roundMoney } from "@/lib/product-pricing";
+
+function optionalPositiveMoney(val: unknown): number | null {
+  if (val === "" || val == null) return null;
+  const n = Number(val);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return roundMoney(n);
+}
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -80,6 +88,14 @@ export async function PUT(req: Request, context: RouteContext) {
             ? Boolean(body.transferOnly)
             : existing.transferOnly,
         categoryIds,
+        minPurchaseAmount:
+          body.minPurchaseAmount !== undefined
+            ? optionalPositiveMoney(body.minPurchaseAmount)
+            : existing.minPurchaseAmount,
+        maxDiscountAmount:
+          body.maxDiscountAmount !== undefined
+            ? optionalPositiveMoney(body.maxDiscountAmount)
+            : existing.maxDiscountAmount,
       },
     });
     return NextResponse.json(coupon);

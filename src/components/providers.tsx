@@ -3,8 +3,9 @@
 import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import SiteModals from "@/components/site/site-modals";
+import AnalyticsProvider from "@/components/analytics/analytics-provider";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
@@ -12,7 +13,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <SessionProvider refetchOnWindowFocus>
       <QueryClientProvider client={queryClient}>
-        {children}
+        <Suspense fallback={null}>
+          <AnalyticsProvider>{children}</AnalyticsProvider>
+        </Suspense>
         <SiteModals />
         <Toaster
           position="bottom-right"

@@ -23,6 +23,8 @@ import {
   FiDollarSign,
   FiTag,
   FiMessageSquare,
+  FiActivity,
+  FiTruck,
 } from "react-icons/fi";
 
 const mainLinks = [
@@ -38,16 +40,25 @@ const mainLinks = [
 
 const salesLinks = [
   { href: "/admin/ordenes", label: "Órdenes", icon: FiShoppingCart },
+  { href: "/admin/analytics", label: "Analítica", icon: FiActivity },
   { href: "/admin/usuarios", label: "Usuarios", icon: FiUsers },
 ];
 
 const payLinks = [
   { href: "/admin/cuentas-pago", label: "Cuentas de pago", icon: FiDollarSign },
-  { href: "/admin/pagos", label: "Mercado Pago", icon: FiCreditCard },
+  { href: "/admin/pagos", label: "Pagos (MP / PayPal)", icon: FiCreditCard },
+  { href: "/admin/envio-zonas", label: "Zonas de envío", icon: FiTruck },
 ];
 
 const configLinks = [
   { href: "/admin/configuracion", label: "Configuración", icon: FiSettings },
+];
+
+const allNavLinks = [
+  ...mainLinks,
+  ...salesLinks,
+  ...payLinks,
+  ...configLinks,
 ];
 
 function isAdminNavActive(pathname: string, href: string): boolean {
@@ -60,6 +71,11 @@ function isAdminNavActive(pathname: string, href: string): boolean {
     );
   }
   return pathname.startsWith(`${href}/`);
+}
+
+function mobileNavTitle(pathname: string): string {
+  const hit = allNavLinks.find((l) => isAdminNavActive(pathname, l.href));
+  return hit?.label ?? "Administración";
 }
 
 function NavSection({
@@ -87,15 +103,15 @@ function NavSection({
               href={link.href}
               onClick={onNavigate}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200",
+                "flex items-center gap-3 px-3 py-3 sm:py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 min-h-[44px] sm:min-h-0 touch-manipulation",
                 isActive
                   ? "bg-gradient-to-r from-primary-light/50 to-secondary-light/35 text-primary-dark font-semibold shadow-sm border border-primary-light/25"
-                  : "text-gray-600 hover:text-warm-gray hover:bg-white/70 border border-transparent"
+                  : "text-gray-600 hover:text-warm-gray hover:bg-white/70 border border-transparent active:bg-white/90"
               )}
             >
               <span
                 className={cn(
-                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
+                  "w-9 h-9 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors",
                   isActive
                     ? "bg-white/80 text-primary-dark"
                     : "bg-white/40 text-gray-500"
@@ -112,19 +128,23 @@ function NavSection({
   );
 }
 
-export default function AdminSidebar() {
+export default function AdminSidebar({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const closeMobile = () => setMobileOpen(false);
 
   const panel = (
-    <div className="flex flex-col h-full">
-      <div className="px-4 pt-5 pb-4 border-b border-primary-light/20">
+    <div className="flex flex-col h-full min-h-0">
+      <div className="px-4 pt-5 pb-4 border-b border-primary-light/20 shrink-0">
         <Link
           href="/"
           onClick={closeMobile}
-          className="flex items-center gap-2 text-xs font-semibold text-primary-dark/80 hover:text-primary-dark transition-colors mb-4"
+          className="inline-flex items-center gap-2 text-xs font-semibold text-primary-dark/80 hover:text-primary-dark transition-colors mb-4 min-h-[44px] sm:min-h-0 py-1 touch-manipulation"
         >
           <FiHome size={14} />
           Volver al sitio
@@ -150,7 +170,7 @@ export default function AdminSidebar() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-4">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-3 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         <NavSection
           title="General"
           links={mainLinks}
@@ -180,19 +200,41 @@ export default function AdminSidebar() {
   );
 
   return (
-    <>
-      <aside className="hidden md:flex w-60 shrink-0 flex-col min-h-[calc(100vh-0px)] border-r border-primary-light/25 bg-gradient-to-b from-[#fff7fb] via-cream/80 to-secondary-light/25">
+    <div className="flex flex-col md:flex-row w-full min-h-[calc(100vh-5.5rem)] md:min-h-[calc(100vh-4.5rem)] bg-cream/50">
+      <aside className="hidden md:flex w-[min(100%,15rem)] lg:w-60 shrink-0 flex-col min-h-0 md:min-h-[calc(100vh-4.5rem)] border-r border-primary-light/25 bg-gradient-to-b from-[#fff7fb] via-cream/80 to-secondary-light/25">
         {panel}
       </aside>
 
-      <button
-        type="button"
-        onClick={() => setMobileOpen(true)}
-        className="md:hidden fixed bottom-4 left-4 z-50 w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg flex items-center justify-center hover:opacity-95 transition-opacity border border-white/20"
-        aria-label="Menú admin"
-      >
-        <FiMenu size={20} />
-      </button>
+      <div className="flex flex-1 flex-col min-w-0 min-h-0">
+        <header className="md:hidden shrink-0 sticky top-0 z-40 flex items-center gap-2 border-b border-primary-light/25 bg-cream/95 backdrop-blur-md px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-warm-gray hover:bg-white/80 active:bg-white border border-transparent touch-manipulation"
+            aria-label="Abrir menú de administración"
+          >
+            <FiMenu size={22} />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400 leading-none">
+              Karamba
+            </p>
+            <p className="text-sm font-extrabold text-warm-gray truncate leading-tight">
+              {mobileNavTitle(pathname)}
+            </p>
+          </div>
+          <Link
+            href="/"
+            className="flex h-11 items-center shrink-0 rounded-xl px-3 text-xs font-semibold text-primary-dark hover:bg-white/80 active:bg-white touch-manipulation"
+          >
+            Sitio
+          </Link>
+        </header>
+
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-3 py-4 sm:px-5 sm:py-6 lg:px-10 lg:py-10 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+          {children}
+        </div>
+      </div>
 
       <AnimatePresence>
         {mobileOpen && (
@@ -203,29 +245,33 @@ export default function AdminSidebar() {
               exit={{ opacity: 0 }}
               aria-hidden
               onClick={closeMobile}
-              className="fixed inset-0 bg-warm-gray/25 backdrop-blur-[2px] z-[80] md:hidden cursor-pointer"
+              className="fixed inset-0 bg-warm-gray/40 backdrop-blur-[2px] z-[80] md:hidden cursor-pointer"
             />
             <motion.aside
-              initial={{ x: "-105%" }}
+              initial={{ x: "-100%" }}
               animate={{ x: 0 }}
-              exit={{ x: "-105%" }}
-              transition={{ type: "spring", damping: 28, stiffness: 320 }}
-              className="fixed top-0 left-0 bottom-0 w-[min(100vw-2.5rem,288px)] z-[90] md:hidden shadow-2xl border-r border-primary-light/30 bg-gradient-to-b from-[#fff7fb] via-cream to-secondary-light/30 flex flex-col rounded-r-3xl overflow-hidden"
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 320 }}
+              className="fixed top-0 left-0 bottom-0 w-[min(100vw-3rem,20.5rem)] max-w-[100vw] z-[90] md:hidden shadow-2xl border-r border-primary-light/30 bg-gradient-to-b from-[#fff7fb] via-cream to-secondary-light/30 flex flex-col pt-[env(safe-area-inset-top)]"
             >
-              <div className="flex justify-end p-2 border-b border-primary-light/15 bg-white/30">
+              <div className="flex justify-between items-center gap-2 px-2 py-2 border-b border-primary-light/15 bg-white/30 shrink-0">
+                <p className="text-xs font-bold text-warm-gray pl-2">Menú</p>
                 <button
                   type="button"
                   onClick={closeMobile}
-                  className="p-2 rounded-xl text-gray-500 hover:bg-white/80 transition-colors"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl text-gray-500 hover:bg-white/80 touch-manipulation"
+                  aria-label="Cerrar menú"
                 >
-                  <FiX size={20} />
+                  <FiX size={22} />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto">{panel}</div>
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain">
+                {panel}
+              </div>
             </motion.aside>
           </>
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 }

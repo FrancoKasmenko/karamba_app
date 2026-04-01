@@ -200,13 +200,13 @@ export default function AdminSidebar({
   );
 
   return (
-    <div className="flex flex-col md:flex-row w-full min-h-[calc(100vh-5.5rem)] md:min-h-[calc(100vh-4.5rem)] bg-cream/50">
-      <aside className="hidden md:flex w-[min(100%,15rem)] lg:w-60 shrink-0 flex-col min-h-0 md:min-h-[calc(100vh-4.5rem)] border-r border-primary-light/25 bg-gradient-to-b from-[#fff7fb] via-cream/80 to-secondary-light/25">
+    <div className="flex min-h-0 flex-1 flex-col bg-cream/50 md:flex-row md:items-stretch">
+      <aside className="hidden min-h-0 shrink-0 border-r border-primary-light/25 bg-gradient-to-b from-[#fff7fb] via-cream/80 to-secondary-light/25 md:flex md:w-[min(100%,15rem)] lg:w-60">
         {panel}
       </aside>
 
-      <div className="flex flex-1 flex-col min-w-0 min-h-0">
-        <header className="md:hidden shrink-0 sticky top-0 z-40 flex items-center gap-2 border-b border-primary-light/25 bg-cream/95 backdrop-blur-md px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))]">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-40 flex shrink-0 items-center gap-2 border-b border-primary-light/25 bg-cream/95 px-2 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur-md md:hidden">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -231,7 +231,7 @@ export default function AdminSidebar({
           </Link>
         </header>
 
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-3 py-4 sm:px-5 sm:py-6 lg:px-10 lg:py-10 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-5 sm:py-6 lg:px-10 lg:py-10">
           {children}
         </div>
       </div>
